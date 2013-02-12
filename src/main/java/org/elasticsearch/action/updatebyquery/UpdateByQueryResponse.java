@@ -26,7 +26,7 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 
-import static com.google.common.collect.Maps.newHashMap;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 /**
  * Encapsulates the result of an update by query request by bundling all bulk item responses.

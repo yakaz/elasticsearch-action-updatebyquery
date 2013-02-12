@@ -19,7 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import com.google.common.collect.Sets;
+import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.ElasticSearchGenerationException;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.WriteConsistencyLevel;
@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.collect.Maps.newHashMap;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 import static org.elasticsearch.action.ValidateActions.addValidationError;
 
 /**

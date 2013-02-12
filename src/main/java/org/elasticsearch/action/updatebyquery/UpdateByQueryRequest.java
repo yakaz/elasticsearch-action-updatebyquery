@@ -40,7 +40,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import java.io.IOException;
 import java.util.Map;
 
-import static com.google.common.collect.Maps.newHashMap;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 import static org.elasticsearch.action.ValidateActions.addValidationError;
 
 /**

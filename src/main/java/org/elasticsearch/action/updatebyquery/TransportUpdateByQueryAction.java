@@ -19,7 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import com.google.common.collect.Lists;
+import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.UnavailableShardsException;

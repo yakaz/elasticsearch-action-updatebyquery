@@ -19,7 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import com.google.common.collect.Maps;
+import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.*;

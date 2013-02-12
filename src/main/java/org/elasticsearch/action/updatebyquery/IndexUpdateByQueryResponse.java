@@ -19,7 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import com.google.common.collect.Maps;
+import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.common.io.stream.StreamInput;

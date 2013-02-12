@@ -30,7 +30,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilderException;
 import java.io.IOException;
 import java.util.Map;
 
-import static com.google.common.collect.Maps.newHashMap;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 /**
  * Source builder of the script, lang, params and query for a update by query request.
