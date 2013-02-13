@@ -29,7 +29,7 @@ import java.io.IOException;
 /**
  * Update by query response from a single shard.
  */
-public class ShardUpdateByQueryResponse implements ActionResponse {
+public class ShardUpdateByQueryResponse extends ActionResponse {
 
     private int shardId;
     private int totalHits;

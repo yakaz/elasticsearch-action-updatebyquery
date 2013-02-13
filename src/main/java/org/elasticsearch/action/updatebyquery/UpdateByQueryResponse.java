@@ -32,7 +32,7 @@ import static org.elasticsearch.common.collect.Maps.newHashMap;
  * Encapsulates the result of an update by query request by bundling all bulk item responses.
  * Each bulk item response holds the result of an individual update.
  */
-public class UpdateByQueryResponse implements ActionResponse {
+public class UpdateByQueryResponse extends ActionResponse {
 
     private long tookInMillis;
     private long totalHits;

@@ -60,7 +60,7 @@ import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.search.internal.InternalSearchRequest;
+import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.*;
@@ -135,7 +135,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         IndexShard indexShard = indexService.shardSafe(request.shardId());
         SearchContext searchContext = new SearchContext(
                 0,
-                new InternalSearchRequest().types(request.types()).filteringAliases(request.filteringAliases()),
+                new ShardSearchRequest().types(request.types()).filteringAliases(request.filteringAliases()),
                 null, indexShard.searcher(), indexService, indexShard,
                 scriptService
         );
@@ -291,7 +291,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             fillBatch(iterator, updateByQueryContext.searchContext.searcher().getIndexReader(), request, updateByQueryContext.bulkItemRequestsBulkList);
             logger.trace("[{}][{}] executing bulk request with size {}", request.index(), request.shardId(), updateByQueryContext.bulkItemRequestsBulkList.size());
             if (updateByQueryContext.bulkItemRequestsBulkList.isEmpty()) {
-                onResponse(new BulkShardResponse(new ShardId(request.index(), request.shardId()), new BulkItemResponse[0]));
+                onResponse(new PublicBulkShardResponse(new ShardId(request.index(), request.shardId()), new BulkItemResponse[0]));
             } else {
                 // We are already on the primary shard. Only have network traffic for replica shards
                 // Also no need for threadpool b/c TransUpdateAction uses it already for local requests.
@@ -299,7 +299,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                         updateByQueryContext.bulkItemRequestsBulkList.toArray(new BulkItemRequest[updateByQueryContext.bulkItemRequestsBulkList.size()]);
                 // We clear the list, since the array is already created
                 updateByQueryContext.bulkItemRequestsBulkList.clear();
-                final BulkShardRequest bulkShardRequest = new BulkShardRequest(
+                final BulkShardRequest bulkShardRequest = new PublicBulkShardRequest(
                         request.index(), request.shardId(), false, bulkItemRequests
                 );
                 // The batches are already threaded... No need for new thread

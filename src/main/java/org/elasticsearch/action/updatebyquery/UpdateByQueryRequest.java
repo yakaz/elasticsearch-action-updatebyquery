@@ -74,21 +74,6 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest {
         return this;
     }
 
-    public UpdateByQueryRequest timeout(TimeValue timeout) {
-        this.timeout = timeout;
-        return this;
-    }
-
-    public UpdateByQueryRequest replicationType(ReplicationType replicationType) {
-        this.replicationType = replicationType;
-        return this;
-    }
-
-    public UpdateByQueryRequest consistencyLevel(WriteConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
-        return this;
-    }
-
     public UpdateByQueryRequest source(BytesReference source, boolean sourceUnsafe) {
         this.source = source;
         this.sourceUnsafe = sourceUnsafe;
