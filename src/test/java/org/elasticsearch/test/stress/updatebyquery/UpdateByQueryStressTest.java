@@ -26,6 +26,7 @@ import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
 import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -62,6 +63,7 @@ public class UpdateByQueryStressTest {
 
         try {
             Client client = nodes.length == 1 ? nodes[0].client() : nodes[1].client();
+            UpdateByQueryClientWrapper updateByQueryClientWrapper = new UpdateByQueryClientWrapper(client);
             try {
                 client.admin().indices().prepareDelete().execute().actionGet();
             } catch (Exception e) {
@@ -86,7 +88,7 @@ public class UpdateByQueryStressTest {
             client.admin().indices().prepareUpdateSettings("*").setSettings(ImmutableSettings.settingsBuilder().put("index.refresh_interval", 1));
             client.admin().cluster().prepareHealth("*").setWaitForGreenStatus().execute().actionGet();
 
-            UpdateByQueryResponse response = client.prepareUpdateByQuery()
+            UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
                     .setIndices("*")
                     .setQuery(QueryBuilders.matchAllQuery())
                     .setScript("ctx._source.field += 1")

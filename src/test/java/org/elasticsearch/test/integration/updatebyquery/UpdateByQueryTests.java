@@ -27,6 +27,7 @@ import org.elasticsearch.action.updatebyquery.BulkResponseOption;
 import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
 import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -47,12 +48,14 @@ import static org.hamcrest.Matchers.*;
 public class UpdateByQueryTests extends AbstractNodesTests {
 
     private Client client;
+    private UpdateByQueryClientWrapper updateByQueryClientWrapper;
 
     @BeforeClass
     public void startNodes() throws Exception {
         startNode("node1", nodeSettings());
         startNode("node2", nodeSettings());
         client = getClient();
+        updateByQueryClientWrapper = new UpdateByQueryClientWrapper(client);
     }
 
     protected void createIndex(String indexName) throws Exception {
@@ -116,7 +119,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(countResponse.count(), equalTo(0L));
 
         Map<String, Object> scriptParams = new HashMap<String, Object>();
-        UpdateByQueryResponse response = client.prepareUpdateByQuery()
+        UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("test")
                 .setTypes("type1")
                 .setIncludeBulkResponses(BulkResponseOption.ALL)
@@ -149,7 +152,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
                 .actionGet();
         assertThat(countResponse.count(), equalTo(numDocs));
 
-        response = client.prepareUpdateByQuery()
+        response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("test")
                 .setTypes("type1")
                 .setScript("ctx._source.field1 += 1").setScriptParams(scriptParams)
@@ -211,7 +214,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(countResponse.count(), equalTo(0L));
 
         Map<String, Object> scriptParams = new HashMap<String, Object>();
-        UpdateByQueryResponse response = client.prepareUpdateByQuery()
+        UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("*")
                 .setTypes("type1")
                 .setIncludeBulkResponses(BulkResponseOption.ALL)
@@ -289,7 +292,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(client.prepareGet("alias1", "type1", "3").execute().actionGet().exists(), equalTo(true));
         assertThat(client.prepareGet("alias1", "type1", "4").execute().actionGet().exists(), equalTo(true));
 
-        UpdateByQueryResponse response = client.prepareUpdateByQuery()
+        UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("alias1")
                 .setQuery(matchAllQuery())
                 .setScript("ctx.op = \"delete\"")
@@ -297,7 +300,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(response.totalHits(), equalTo(1L));
         assertThat(response.updated(), equalTo(1L));
 
-        response = client.prepareUpdateByQuery()
+        response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("alias0")
                 .setQuery(matchAllQuery())
                 .setScript("ctx.op = \"delete\"")
