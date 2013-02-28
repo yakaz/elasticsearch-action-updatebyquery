@@ -4,38 +4,40 @@ ElasticSearch Update By Query Plugin
 The update by query API allows all documents that with the query to be updated with a script.
 This is experimental.
 
-This plugin is an adaptation of elasticsearch/elasticsearch#2230.
+This plugin is an adaptation of [elasticsearch/elasticsearch#2230][es#2230].
 
 Installation
 -----------
 
 Simply run at the root of your ElasticSearch v0.20.2+ installation:
 
-    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.0.0
+    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.1.0
 
 This will download the plugin from the Central Maven Repository.
 
 For older versions of ElasticSearch, you can still use the longer:
 
-    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.0.0/elasticsearch-action-updatebyquery-1.0.0.zip install elasticsearch-action-updatebyquery
+    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.1.0/elasticsearch-action-updatebyquery-1.1.0.zip install elasticsearch-action-updatebyquery
 
 In order to declare this plugin as a dependency, add the following to your `pom.xml`:
 
     <dependency>
         <groupId>com.yakaz.elasticsearch.plugins</groupId>
         <artifactId>elasticsearch-action-updatebyquery/artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </dependency>
 
 Version matrix:
 
-    ----------------------------------------------------
-    | Update By Query Action Plugin | ElasticSearch    |
-    ----------------------------------------------------
-    | master                        | 0.20.0 -> master |
-    ----------------------------------------------------
-    | 1.0.0                         | 0.20.0 -> master |
-    ----------------------------------------------------
+    --------------------------------------------------
+    | Update By Query Action Plugin | ElasticSearch  |
+    --------------------------------------------------
+    | master                        | 0.90 -> master |
+    --------------------------------------------------
+    | 1.1.0                         | 0.90 -> master |
+    --------------------------------------------------
+    | 1.0.0                         | 0.20 -> master |
+    --------------------------------------------------
 
 Description
 -----------
@@ -110,3 +112,6 @@ Additional general options in request body:
   Warning: `all` can result in out of memory errors when the query results in many hits.
 * `routing`: Sets the routing that will be used to route the document to the relevant shard.
 * `timeout`: Timeout waiting for a shard to become available.
+
+
+[es#2230]: https://github.com/elasticsearch/elasticsearch/issues/2230
