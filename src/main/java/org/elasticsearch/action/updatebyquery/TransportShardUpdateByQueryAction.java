@@ -20,6 +20,7 @@
 package org.elasticsearch.action.updatebyquery;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Term;
 import org.elasticsearch.common.collect.Maps;
@@ -329,7 +330,9 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             int counter = 0;
             for (int docID = iterator.nextDoc(); docID != DocIdSetIterator.NO_MORE_DOCS; docID = iterator.nextDoc()) {
                 Document document = indexReader.document(docID, fieldsToLoad);
-                bulkItemRequests.add(new BulkItemRequest(counter, createRequest(request, document, indexReader)));
+                int readerIndex = ReaderUtil.subIndex(docID, indexReader.leaves());
+                AtomicReaderContext subReaderContext = indexReader.leaves().get(readerIndex);
+                bulkItemRequests.add(new BulkItemRequest(counter, createRequest(request, document, subReaderContext)));
 
                 if (++counter == batchSize) {
                     break;
@@ -338,15 +341,10 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         // TODO: this is currently very similar to what we do in the update action, need to figure out how to nicely consolidate the two
-        private ActionRequest createRequest(ShardUpdateByQueryRequest request, Document document, IndexReader indexReader) {
+        private ActionRequest createRequest(ShardUpdateByQueryRequest request, Document document, AtomicReaderContext subReaderContext) {
             Uid uid = Uid.createUid(document.get(UidFieldMapper.NAME));
             Term tUid = new Term(UidFieldMapper.NAME, uid.toString());
-            long version = -2;
-            for (AtomicReaderContext reader : indexReader.leaves()) {
-                version = UidField.loadVersion(reader, tUid);
-                if (version != -1)
-                    break;
-            }
+            long version = version = UidField.loadVersion(subReaderContext, tUid);
             BytesReference _source = new BytesArray(document.getBinaryValue(SourceFieldMapper.NAME));
             String routing = document.get(RoutingFieldMapper.NAME);
             String parent = document.get(ParentFieldMapper.NAME);
