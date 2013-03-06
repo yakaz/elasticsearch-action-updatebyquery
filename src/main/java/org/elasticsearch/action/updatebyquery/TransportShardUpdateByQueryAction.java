@@ -20,8 +20,8 @@
 package org.elasticsearch.action.updatebyquery;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.Term;
 import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.document.Document;
@@ -88,6 +88,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         fieldsToLoad.add(RoutingFieldMapper.NAME);
         fieldsToLoad.add(ParentFieldMapper.NAME);
         fieldsToLoad.add(TTLFieldMapper.NAME);
+        fieldsToLoad.add(TimestampFieldMapper.NAME);
     }
 
     private final TransportShardBulkAction bulkAction;
@@ -344,16 +345,33 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         private ActionRequest createRequest(ShardUpdateByQueryRequest request, Document document, AtomicReaderContext subReaderContext) {
             Uid uid = Uid.createUid(document.get(UidFieldMapper.NAME));
             Term tUid = new Term(UidFieldMapper.NAME, uid.toString());
-            long version = version = UidField.loadVersion(subReaderContext, tUid);
+            long version = UidField.loadVersion(subReaderContext, tUid);
             BytesReference _source = new BytesArray(document.getBinaryValue(SourceFieldMapper.NAME));
             String routing = document.get(RoutingFieldMapper.NAME);
             String parent = document.get(ParentFieldMapper.NAME);
+            IndexableField optionalField;
+            optionalField = document.getField(TimestampFieldMapper.NAME);
+            Number originTimestamp = optionalField == null ? null : optionalField.numericValue();
+            optionalField = document.getField(TTLFieldMapper.NAME);
+            Number originTtl = optionalField == null ? null : optionalField.numericValue();
+            if (originTtl != null && originTimestamp != null)
+                // Unshift TTL from timestamp
+                originTtl = originTtl.longValue() - originTimestamp.longValue();
 
             Tuple<XContentType, Map<String, Object>> sourceAndContent = XContentHelper.convertToMap(_source, true);
             final XContentType updateSourceContentType = sourceAndContent.v1();
 
             updateByQueryContext.scriptContext.clear();
+            updateByQueryContext.scriptContext.put("_index", request.index());
+            updateByQueryContext.scriptContext.put("_uid", uid.toString());
+            updateByQueryContext.scriptContext.put("_type", uid.type());
+            updateByQueryContext.scriptContext.put("_id", uid.id());
+            updateByQueryContext.scriptContext.put("_version", version);
             updateByQueryContext.scriptContext.put("_source", sourceAndContent.v2());
+            updateByQueryContext.scriptContext.put("_routing", routing);
+            updateByQueryContext.scriptContext.put("_parent", parent);
+            updateByQueryContext.scriptContext.put("_timestamp", originTimestamp);
+            updateByQueryContext.scriptContext.put("_ttl", originTtl);
 
             try {
                 updateByQueryContext.executableScript.setNextVar("ctx", updateByQueryContext.scriptContext);
@@ -365,7 +383,15 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             }
 
             String operation = (String) updateByQueryContext.scriptContext.get("op");
-            String timestamp = (String) updateByQueryContext.scriptContext.get("_timestamp");
+            Object fetchedTimestamp = updateByQueryContext.scriptContext.get("_timestamp");
+            String timestamp = null;
+            if (fetchedTimestamp != null) {
+                if (fetchedTimestamp instanceof String) {
+                    timestamp = String.valueOf(TimeValue.parseTimeValue((String) fetchedTimestamp, null).millis());
+                } else {
+                    timestamp = fetchedTimestamp.toString();
+                }
+            }
             Object fetchedTTL = updateByQueryContext.scriptContext.get("_ttl");
             Long ttl = null;
             if (fetchedTTL != null) {

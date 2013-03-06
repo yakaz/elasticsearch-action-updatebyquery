@@ -113,5 +113,35 @@ Additional general options in request body:
 * `routing`: Sets the routing that will be used to route the document to the relevant shard.
 * `timeout`: Timeout waiting for a shard to become available.
 
+Context variables
+-----------------
+
+The script has access to the following variables:
+
+* `ctx`
+  * `_index`
+  * `_uid`
+  * `_type`
+  * `_id`
+  * `_version`
+  * `_source`
+  * `_routing`
+  * `_parent`
+  * `_timestamp` (in milliseconds)
+  * `_ttl` (in milliseconds)
+
+### Output variables
+
+You may update the following variables:
+
+* `ctx`
+  * `_timestamp`
+  * `_ttl`
+
+They are parsed as time values: either milliseconds since epoch, or a duration string like `"30m"`.
+If you wish to change the timestamp of your document, to make it more recent, either set a new value to `_timestamp` or set it to `null`.
+Otherwise the previous `_timestamp` is preserved.
+`_ttl` is preserved too if you don't change or remove it.
+
 
 [es#2230]: https://github.com/elasticsearch/elasticsearch/issues/2230

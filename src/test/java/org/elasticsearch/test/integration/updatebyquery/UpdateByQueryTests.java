@@ -23,6 +23,7 @@ import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.count.CountResponse;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.updatebyquery.BulkResponseOption;
 import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
 import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
@@ -32,6 +33,7 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.integration.AbstractNodesTests;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -312,6 +314,83 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(client.prepareGet("alias0", "type1", "2").execute().actionGet().isExists(), equalTo(false));
         assertThat(client.prepareGet("alias1", "type1", "3").execute().actionGet().isExists(), equalTo(true));
         assertThat(client.prepareGet("alias1", "type1", "4").execute().actionGet().isExists(), equalTo(false));
+    }
+
+    @Test
+    public void testUpdateByQuery_fields() throws Exception {
+        createIndex("test");
+        ClusterHealthResponse clusterHealth = client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
+        assertThat(clusterHealth.isTimedOut(), equalTo(false));
+        assertThat(clusterHealth.getStatus(), equalTo(ClusterHealthStatus.GREEN));
+
+        long timestamp = System.currentTimeMillis();
+        client.prepareIndex()
+                .setIndex("test")
+                .setType("type1")
+                .setId("id1")
+                .setRouting("routing1")
+                .setTimestamp(String.valueOf(timestamp))
+                .setTTL(111211211)
+                .setSource("field1", 1, "content", "foo")
+                .execute().actionGet();
+        client.admin().indices().prepareRefresh("test").setWaitForOperations(true).execute().actionGet();
+
+        CountResponse countResponse = client.prepareCount("test")
+                .setQuery(termQuery("field1", 1).buildAsBytes())
+                .execute()
+                .actionGet();
+        assertThat(countResponse.getCount(), equalTo(1L));
+
+        countResponse = client.prepareCount("test")
+                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .execute()
+                .actionGet();
+        assertThat(countResponse.getCount(), equalTo(0L));
+
+        Map<String, Object> scriptParams = new HashMap<String, Object>();
+        scriptParams.put("delim", "_");
+        UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
+                .setIndices("test")
+                .setTypes("type1")
+                .setIncludeBulkResponses(BulkResponseOption.ALL)
+                .setScript("ctx._source.field1 += 1;\n"+
+                        "ctx._source.content = ctx._index" +
+                        " + delim + ctx._type" +
+                        " + delim + ctx._id" +
+                        " + delim + ctx._uid" +
+                        " + delim + ctx._parent" +
+                        " + delim + ctx._routing" +
+                        " + delim + ctx._timestamp" +
+                        " + delim + ctx._ttl" +
+                        " + delim + ctx._version" +
+                        " + delim + ctx._source.content;")
+                .setScriptParams(scriptParams)
+                .setQuery(matchAllQuery())
+                .execute()
+                .actionGet();
+
+        assertThat(response, notNullValue());
+        assertThat(response.mainFailures().length, equalTo(0));
+        assertThat(response.totalHits(), equalTo(1L));
+        assertThat(response.updated(), equalTo(1L));
+        assertThat(response.indexResponses().length, equalTo(1));
+        assertThat(response.indexResponses()[0].countShardResponses(), equalTo(1L));
+        assertThat(response.indexResponses()[0].failuresByShard().isEmpty(), equalTo(true));
+
+        client.admin().indices().prepareRefresh("test").execute().actionGet();
+        countResponse = client.prepareCount("test")
+                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .execute()
+                .actionGet();
+        assertThat(countResponse.getCount(), equalTo(1L));
+
+        SearchResponse searchResponse = client.prepareSearch("test").setQuery(matchAllQuery()).execute().actionGet();
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(1L));
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            assertThat(hit.getType(), equalTo("type1"));
+            assertThat(hit.getId(), equalTo("id1"));
+            assertThat((String)hit.getSource().get("content"), equalTo("test_type1_id1_type1#id1_null_routing1_"+timestamp+"_111211211_1_foo"));
+        }
     }
 
 }
