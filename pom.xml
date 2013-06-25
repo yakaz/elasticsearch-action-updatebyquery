@@ -46,10 +46,16 @@
 
     <properties>
         <elasticsearch.version>0.90.0.Beta1</elasticsearch.version>
-        <lucene.version>4.1.0</lucene.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>${elasticsearch.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -69,16 +75,25 @@
 
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
+            <artifactId>hamcrest-core</artifactId>
             <version>1.3</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>compile</scope>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.6.2</version>
+            <scope>test</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
@@ -111,12 +126,13 @@
                     <includes>
                         <include>**/*Tests.java</include>
                     </includes>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>org.elasticsearch.test.TestNGLoggingListener</value>
+                        </property>
+                    </properties>
                     <argLine>-Xmx512m -Des.logger.prefix=</argLine>
-                    <systemPropertyVariables>
-                        <es.node.local>${env.ES_TEST_LOCAL}</es.node.local>
-                        <es.transport.tcp.compress>${env.ES_TEST_COMPRESS}</es.transport.tcp.compress>
-                        <es.index.store.compress.stored>${env.ES_TEST_COMPRESS}</es.index.store.compress.stored>
-                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
