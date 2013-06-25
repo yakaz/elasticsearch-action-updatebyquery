@@ -26,12 +26,11 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 
-import static org.elasticsearch.common.collect.Maps.newHashMap;
-
 /**
  * Encapsulates the result of an update by query request by bundling all bulk item responses.
  * Each bulk item response holds the result of an individual update.
  */
+// TODO: implements Iterable for index responses
 public class UpdateByQueryResponse extends ActionResponse {
 
     private long tookInMillis;

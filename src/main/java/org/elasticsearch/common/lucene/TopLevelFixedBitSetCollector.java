@@ -48,6 +48,7 @@ public class TopLevelFixedBitSetCollector extends Collector {
         bitSet.set(docBase + doc);
     }
 
+    @Override
     public void setNextReader(AtomicReaderContext context) throws IOException {
         this.docBase = context.docBase;
     }

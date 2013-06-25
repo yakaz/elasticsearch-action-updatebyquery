@@ -32,6 +32,7 @@ import java.util.Map;
  * Encapsulates the result of an update by query request by bundling all bulk item responses.
  * Each bulk item response holds the result of an individual update.
  */
+// TODO: Add Iterable for shard responses
 public class IndexUpdateByQueryResponse extends ActionResponse {
 
     private String index;

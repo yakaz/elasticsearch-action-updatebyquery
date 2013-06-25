@@ -20,14 +20,13 @@
 package org.elasticsearch.action.updatebyquery;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.WriteConsistencyLevel;
+import org.elasticsearch.action.support.replication.IndicesReplicationOperationRequestBuilder;
 import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
-import org.elasticsearch.client.internal.InternalGenericClient;
+import org.elasticsearch.client.internal.InternalClient;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilder;
 
 import java.util.Map;
@@ -35,28 +34,18 @@ import java.util.Map;
 /**
  * A request builder that produces {@link IndexUpdateByQueryRequest} instances.
  */
-public class UpdateByQueryRequestBuilder extends ActionRequestBuilder<UpdateByQueryRequest, UpdateByQueryResponse, UpdateByQueryRequestBuilder> {
+public class UpdateByQueryRequestBuilder extends IndicesReplicationOperationRequestBuilder<UpdateByQueryRequest, UpdateByQueryResponse, UpdateByQueryRequestBuilder> {
 
     private final UpdateByQueryClientWrapper updateByQueryClientWrapper;
     private UpdateByQuerySourceBuilder sourceBuilder;
 
     public UpdateByQueryRequestBuilder(Client client) {
-        super((InternalGenericClient)client, new UpdateByQueryRequest());
+        super((InternalClient)client, new UpdateByQueryRequest());
         updateByQueryClientWrapper = new UpdateByQueryClientWrapper(client);
     }
 
     public UpdateByQueryRequestBuilder setTypes(String... types) {
         request().types(types);
-        return this;
-    }
-
-    public UpdateByQueryRequestBuilder setIndices(String... indices) {
-        request().indices(indices);
-        return this;
-    }
-
-    public UpdateByQueryRequestBuilder setTimeout(TimeValue timeout) {
-        request().timeout(timeout);
         return this;
     }
 
