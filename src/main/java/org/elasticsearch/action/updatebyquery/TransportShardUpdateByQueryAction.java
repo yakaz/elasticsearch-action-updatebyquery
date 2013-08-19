@@ -40,6 +40,7 @@ import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.TransportAction;
+import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
@@ -100,6 +101,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private final IndicesService indicesService;
     private final ClusterService clusterService;
     private final ScriptService scriptService;
+    private final CacheRecycler cacheRecycler;
     private final int batchSize;
 
     @Inject
@@ -109,13 +111,15 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                              TransportService transportService,
                                              IndicesService indicesService,
                                              ClusterService clusterService,
-                                             ScriptService scriptService) {
+                                             ScriptService scriptService,
+                                             CacheRecycler cacheRecycler) {
         super(settings, threadPool);
         this.bulkAction = bulkAction;
         this.indicesService = indicesService;
         this.clusterService = clusterService;
         this.scriptService = scriptService;
         this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
+        this.cacheRecycler = cacheRecycler;
         transportService.registerHandler(ACTION_NAME, new TransportHandler());
     }
 
@@ -149,7 +153,8 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 0,
                 shardSearchRequest,
                 null, indexShard.searcher(), indexService, indexShard,
-                scriptService
+                scriptService,
+                cacheRecycler
         );
         SearchContext.setCurrent(searchContext);
         try {
