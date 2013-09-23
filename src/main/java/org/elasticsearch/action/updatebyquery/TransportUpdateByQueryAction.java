@@ -19,7 +19,13 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.elasticsearch.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.UnavailableShardsException;
@@ -43,13 +49,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.node.NodeClosedException;
 import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.transport.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import org.elasticsearch.transport.BaseTransportRequestHandler;
+import org.elasticsearch.transport.BaseTransportResponseHandler;
+import org.elasticsearch.transport.TransportChannel;
+import org.elasticsearch.transport.TransportException;
+import org.elasticsearch.transport.TransportService;
 
 /**
  * Delegates a {@link IndexUpdateByQueryRequest} to the primary shards of the index this request is targeted to.
@@ -131,8 +135,8 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
         private void finishHim() {
             long tookInMillis = System.currentTimeMillis() - startTime;
             UpdateByQueryResponse response = new UpdateByQueryResponse(tookInMillis);
-            List<IndexUpdateByQueryResponse> indexResponses = Lists.newArrayList();
-            List<String> indexFailures = Lists.newArrayList();
+            List<IndexUpdateByQueryResponse> indexResponses = new ArrayList();
+            List<String> indexFailures = new ArrayList();
             for (int i = 0; i < expectedNumberOfResponses; i++) {
                 IndexUpdateByQueryResponse indexResponse = successFullIndexResponses.get(i);
                 if (indexResponse != null) {
@@ -215,7 +219,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
                 return false;
             }
 
-            List<ShardRouting> primaryShards = Lists.newArrayList();
+            List<ShardRouting> primaryShards = new ArrayList();
             GroupShardsIterator groupShardsIterator =
                     clusterService.operationRouting().deleteByQueryShards(state, request.index(), request.routing());
             for (ShardIterator shardIt : groupShardsIterator) {

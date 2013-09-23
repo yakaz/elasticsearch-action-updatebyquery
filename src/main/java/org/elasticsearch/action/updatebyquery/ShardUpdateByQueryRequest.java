@@ -19,19 +19,16 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import static org.elasticsearch.action.ValidateActions.addValidationError;
+
+import java.io.IOException;
+
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.replication.ShardReplicationOperationRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.elasticsearch.common.collect.Maps.newHashMap;
-import static org.elasticsearch.action.ValidateActions.addValidationError;
 
 /**
  * Represents a shard update by query request, that will be performed on the targeted shard.

@@ -19,15 +19,20 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.index.Term;
-import org.elasticsearch.common.collect.Maps;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DocumentStoredFieldVisitor;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.FixedBitSet;
@@ -36,7 +41,13 @@ import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequest;
-import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.bulk.BulkItemRequest;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkShardRequest;
+import org.elasticsearch.action.bulk.BulkShardResponse;
+import org.elasticsearch.action.bulk.PublicBulkShardRequest;
+import org.elasticsearch.action.bulk.PublicBulkShardResponse;
+import org.elasticsearch.action.bulk.TransportShardBulkAction;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.TransportAction;
@@ -59,7 +70,12 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.mapper.Uid;
-import org.elasticsearch.index.mapper.internal.*;
+import org.elasticsearch.index.mapper.internal.ParentFieldMapper;
+import org.elasticsearch.index.mapper.internal.RoutingFieldMapper;
+import org.elasticsearch.index.mapper.internal.SourceFieldMapper;
+import org.elasticsearch.index.mapper.internal.TTLFieldMapper;
+import org.elasticsearch.index.mapper.internal.TimestampFieldMapper;
+import org.elasticsearch.index.mapper.internal.UidFieldMapper;
 import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.ShardId;
@@ -73,9 +89,6 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.BaseTransportRequestHandler;
 import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportService;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * Transport action that translates the shard update by query request into a bulk request. All actions are performed
@@ -152,7 +165,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         SearchContext searchContext = new SearchContext(
                 0,
                 shardSearchRequest,
-                null, indexShard.searcher(), indexService, indexShard,
+                null, indexShard.acquireSearcher(), indexService, indexShard,
                 scriptService,
                 cacheRecycler
         );
@@ -191,7 +204,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         ParsedQuery parsedQuery = null;
         String script = null;
         String scriptLang = null;
-        Map<String, Object> params = Maps.newHashMap();
+        Map<String, Object> params = new HashMap();
         try {
             XContentParser parser = XContentHelper.createParser(request.source());
             for (XContentParser.Token token = parser.nextToken(); token != XContentParser.Token.END_OBJECT; token = parser.nextToken()) {
