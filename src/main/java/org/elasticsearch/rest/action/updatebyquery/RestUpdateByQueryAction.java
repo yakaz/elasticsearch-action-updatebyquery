@@ -19,31 +19,39 @@
 
 package org.elasticsearch.rest.action.updatebyquery;
 
+import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestStatus.OK;
+
+import java.io.IOException;
+import java.util.Map;
+
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.support.replication.ReplicationType;
-import org.elasticsearch.action.updatebyquery.*;
+import org.elasticsearch.action.updatebyquery.BulkResponseOption;
+import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
+import org.elasticsearch.action.updatebyquery.UpdateByQueryRequest;
+import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
+import org.elasticsearch.action.updatebyquery.UpdateByQuerySourceBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
-import org.elasticsearch.rest.*;
+import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.RestChannel;
+import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.XContentRestResponse;
+import org.elasticsearch.rest.XContentThrowableRestResponse;
 import org.elasticsearch.rest.action.support.RestActions;
 import org.elasticsearch.rest.action.support.RestXContentBuilder;
-
-import java.io.IOException;
-import java.util.Map;
-
-import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.OK;
-import static org.elasticsearch.rest.action.support.RestActions.splitIndices;
-import static org.elasticsearch.rest.action.support.RestActions.splitTypes;
 
 /**
  * Rest handler for update by query requests.
@@ -62,8 +70,8 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
-                splitIndices(request.param("index")),
-                splitTypes(request.param("type"))
+        		Strings.splitStringByCommaToArray(request.param("index")),
+        		Strings.splitStringByCommaToArray(request.param("type"))
         );
         udqRequest.listenerThreaded(false);
         String replicationType = request.param("replication");

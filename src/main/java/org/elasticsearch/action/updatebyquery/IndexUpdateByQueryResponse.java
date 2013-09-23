@@ -19,14 +19,14 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.elasticsearch.common.collect.Maps;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-
-import java.io.IOException;
-import java.util.Map;
 
 /**
  * Encapsulates the result of an update by query request by bundling all bulk item responses.
@@ -38,8 +38,8 @@ public class IndexUpdateByQueryResponse extends ActionResponse {
     private String index;
     private long totalHits;
     private long updated;
-    private Map<Integer, BulkItemResponse[]> responsesByShard = Maps.newHashMap();
-    private Map<Integer, String> failuresByShard = Maps.newHashMap();
+    private Map<Integer, BulkItemResponse[]> responsesByShard = new HashMap();
+    private Map<Integer, String> failuresByShard = new HashMap();
 
     IndexUpdateByQueryResponse() {
     }

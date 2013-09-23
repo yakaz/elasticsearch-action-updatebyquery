@@ -19,6 +19,10 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -26,11 +30,6 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilderException;
-
-import java.io.IOException;
-import java.util.Map;
-
-import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 /**
  * Source builder of the script, lang, params and query for a update by query request.
@@ -41,7 +40,7 @@ public class UpdateByQuerySourceBuilder implements ToXContent {
     private BytesReference queryBinary;
     private String script;
     private String scriptLang;
-    private Map<String, Object> scriptParams = newHashMap();
+    private Map<String, Object> scriptParams = new HashMap();
 
     public UpdateByQuerySourceBuilder query(QueryBuilder query) {
         this.queryBuilder = query;

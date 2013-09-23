@@ -19,29 +19,18 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.elasticsearch.common.collect.Sets;
-import org.elasticsearch.ElasticSearchGenerationException;
+import static org.elasticsearch.action.ValidateActions.addValidationError;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.elasticsearch.action.ActionRequestValidationException;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.support.replication.IndexReplicationOperationRequest;
-import org.elasticsearch.action.support.replication.ReplicationType;
-import org.elasticsearch.client.Requests;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-
-import static org.elasticsearch.common.collect.Maps.newHashMap;
-import static org.elasticsearch.action.ValidateActions.addValidationError;
 
 /**
  * Represents an update by query request targeted for a specific index.
@@ -51,7 +40,7 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest 
     private String[] types = new String[0];
     private BulkResponseOption bulkResponseOption;
     private String[] filteringAliases = new String[0];
-    private Set<String> routing = Sets.newHashSet();
+    private Set<String> routing = new HashSet();
 
     private BytesReference source;
     private boolean sourceUnsafe;
@@ -119,10 +108,12 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        types = in.readStringArray();
+        String[] readStringArray = in.readStringArray();
+		types = readStringArray;
         bulkResponseOption = BulkResponseOption.fromId(in.readByte());
-        filteringAliases = in.readStringArray();
-        routing = Sets.newHashSet(in.readStringArray());
+        filteringAliases = readStringArray;
+        routing = new HashSet();
+        routing.addAll(Arrays.asList(readStringArray));
         source = in.readBytesReference();
         sourceUnsafe = false;
     }
