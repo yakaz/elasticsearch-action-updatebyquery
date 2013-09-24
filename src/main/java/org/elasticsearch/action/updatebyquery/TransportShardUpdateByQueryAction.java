@@ -152,7 +152,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         SearchContext searchContext = new SearchContext(
                 0,
                 shardSearchRequest,
-                null, indexShard.searcher(), indexService, indexShard,
+                null, indexShard.acquireSearcher(), indexService, indexShard,
                 scriptService,
                 cacheRecycler
         );

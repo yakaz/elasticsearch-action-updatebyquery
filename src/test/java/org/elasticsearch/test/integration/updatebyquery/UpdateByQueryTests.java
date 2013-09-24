@@ -336,7 +336,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
                 .setTTL(111211211)
                 .setSource("field1", 1, "content", "foo")
                 .execute().actionGet();
-        client.admin().indices().prepareRefresh("test").setWaitForOperations(true).execute().actionGet();
+        client.admin().indices().prepareRefresh("test").execute().actionGet();
 
         CountResponse countResponse = client.prepareCount("test")
                 .setQuery(termQuery("field1", 1).buildAsBytes())

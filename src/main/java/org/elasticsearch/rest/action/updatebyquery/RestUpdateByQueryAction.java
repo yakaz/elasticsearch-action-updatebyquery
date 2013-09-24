@@ -40,10 +40,9 @@ import org.elasticsearch.rest.action.support.RestXContentBuilder;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.elasticsearch.common.Strings.splitStringByCommaToArray;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
-import static org.elasticsearch.rest.action.support.RestActions.splitIndices;
-import static org.elasticsearch.rest.action.support.RestActions.splitTypes;
 
 /**
  * Rest handler for update by query requests.
@@ -62,8 +61,8 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
-                splitIndices(request.param("index")),
-                splitTypes(request.param("type"))
+                splitStringByCommaToArray(request.param("index")),
+                splitStringByCommaToArray(request.param("type"))
         );
         udqRequest.listenerThreaded(false);
         String replicationType = request.param("replication");
