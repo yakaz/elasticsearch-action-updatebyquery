@@ -11,20 +11,20 @@ Installation
 
 Simply run at the root of your ElasticSearch v0.20.2+ installation:
 
-    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.2.0
+    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.3.0
 
 This will download the plugin from the Central Maven Repository.
 
 For older versions of ElasticSearch, you can still use the longer:
 
-    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.2.0/elasticsearch-action-updatebyquery-1.2.0.zip install elasticsearch-action-updatebyquery
+    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.3.0/elasticsearch-action-updatebyquery-1.3.0.zip install elasticsearch-action-updatebyquery
 
 In order to declare this plugin as a dependency, add the following to your `pom.xml`:
 
     <dependency>
         <groupId>com.yakaz.elasticsearch.plugins</groupId>
         <artifactId>elasticsearch-action-updatebyquery/artifactId>
-        <version>1.2.0</version>
+        <version>1.3.0</version>
     </dependency>
 
 Version matrix:
@@ -33,6 +33,8 @@ Version matrix:
     │ Update By Query Action Plugin │ ElasticSearch          │
     ├───────────────────────────────┼────────────────────────┤
     │ master                        │ 0.90.4 ─►              │
+    ├───────────────────────────────┼────────────────────────┤
+    │ 1.3.0                         │ 0.90.4 ─►              │
     ├───────────────────────────────┼────────────────────────┤
     │ 1.2.0                         │ 0.90.3                 │
     ├───────────────────────────────┼────────────────────────┤
