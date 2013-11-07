@@ -11,7 +11,7 @@ Installation
 
 Simply run at the root of your ElasticSearch v0.20.2+ installation:
 
-    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.3.0
+    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.4.0
 
 This will download the plugin from the Central Maven Repository.
 
@@ -34,9 +34,9 @@ Version matrix:
     ┌───────────────────────────────┬────────────────────────┐
     │ Update By Query Action Plugin │ ElasticSearch          │
     ├───────────────────────────────┼────────────────────────┤
-    │ master                        │ 0.90.4 ─►              │
+    │ 1.4.0                         │ 0.90.6                 │
     ├───────────────────────────────┼────────────────────────┤
-    │ 1.3.0                         │ 0.90.4 ─►              │
+    │ 1.3.0                         │ 0.90.4 ─► 0.90.5       │
     ├───────────────────────────────┼────────────────────────┤
     │ 1.2.0                         │ 0.90.3                 │
     ├───────────────────────────────┼────────────────────────┤
