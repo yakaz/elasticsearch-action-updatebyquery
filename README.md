@@ -17,7 +17,7 @@ This will download the plugin from the Central Maven Repository.
 
 For older versions of ElasticSearch, you can still use the longer:
 
-    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.3.0/elasticsearch-action-updatebyquery-1.3.0.zip install elasticsearch-action-updatebyquery
+    bin/plugin -url http://oss.sonatype.org/content/repositories/releases/com/yakaz/elasticsearch/plugins/elasticsearch-action-updatebyquery/1.0.0/elasticsearch-action-updatebyquery-1.0.0.zip install elasticsearch-action-updatebyquery
 
 In order to declare this plugin as a dependency, add the following to your `pom.xml`:
 
