@@ -21,11 +21,13 @@ For older versions of ElasticSearch, you can still use the longer:
 
 In order to declare this plugin as a dependency, add the following to your `pom.xml`:
 
-    <dependency>
-        <groupId>com.yakaz.elasticsearch.plugins</groupId>
-        <artifactId>elasticsearch-action-updatebyquery/artifactId>
-        <version>1.3.0</version>
-    </dependency>
+```xml
+<dependency>
+    <groupId>com.yakaz.elasticsearch.plugins</groupId>
+    <artifactId>elasticsearch-action-updatebyquery/artifactId>
+    <version>1.4.0</version>
+</dependency>
+```
 
 Version matrix:
 
@@ -62,37 +64,43 @@ Example usage
 
 Index an example document:
 
-    curl -XPUT 'localhost:9200/twitter/tweet/1' -d '
-    {
-        "text" : {
-            "message" : "you know for search"
-        },
-        "likes": 0
-    }'
+```sh
+curl -XPUT 'localhost:9200/twitter/tweet/1' -d '
+{
+    "text" : {
+        "message" : "you know for search"
+    },
+    "likes": 0
+}'
+```
 
 Execute the following update by query command:
 
-    curl -XPOST 'localhost:9200/twitter/_update_by_query' -d '
-    {
-        "query" : {
-            "term" : {
-                "message" : "you"
-            }
-        },
-        "script" : "ctx._source.likes += 1"
-    }'
+```sh
+curl -XPOST 'localhost:9200/twitter/_update_by_query' -d '
+{
+    "query" : {
+        "term" : {
+            "message" : "you"
+        }
+    },
+    "script" : "ctx._source.likes += 1"
+}'
+```
 
 This will yield the following response:
 
-    {
-      "ok" : true,
-      "took" : 9,
-      "total" : 1,
-      "updated" : 1,
-      "indices" : [ {
-        "twitter" : { }
-      } ]
-    }
+```js
+{
+  "ok" : true,
+  "took" : 9,
+  "total" : 1,
+  "updated" : 1,
+  "indices" : [ {
+    "twitter" : { }
+  } ]
+}
+```
 
 By default no bulk item responses are included in the response.
 If there are bulk item responses included in the response, the bulk response items are grouped by index and shard.
