@@ -10,7 +10,7 @@
 
     <groupId>com.yakaz.elasticsearch.plugins</groupId>
     <artifactId>elasticsearch-action-updatebyquery</artifactId>
-    <version>1.4.0</version>
+    <version>1.5.0.Beta2</version>
     <packaging>jar</packaging>
 
     <url>http://github.com/yakaz/elasticsearch-action-updatebyquery</url>
@@ -45,7 +45,7 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>0.90.6</elasticsearch.version>
+        <elasticsearch.version>1.0.0.Beta2</elasticsearch.version>
     </properties>
 
     <dependencies>
