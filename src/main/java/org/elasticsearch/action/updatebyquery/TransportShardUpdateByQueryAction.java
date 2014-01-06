@@ -23,12 +23,9 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.Term;
-import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DocumentStoredFieldVisitor;
-import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.FixedBitSet;
 import org.elasticsearch.ElasticSearchException;
@@ -48,10 +45,11 @@ import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.TopLevelFixedBitSetCollector;
-import org.elasticsearch.common.lucene.uid.UidField;
+import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -67,6 +65,7 @@ import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.search.internal.DefaultSearchContext;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -149,7 +148,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         ShardSearchRequest shardSearchRequest = new ShardSearchRequest();
         shardSearchRequest.types(request.types());
         shardSearchRequest.filteringAliases(request.filteringAliases());
-        SearchContext searchContext = new SearchContext(
+        SearchContext searchContext = new DefaultSearchContext(
                 0,
                 shardSearchRequest,
                 null, indexShard.acquireSearcher("update_by_query"), indexService, indexShard,
@@ -362,7 +361,12 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         private ActionRequest createRequest(ShardUpdateByQueryRequest request, Document document, AtomicReaderContext subReaderContext) {
             Uid uid = Uid.createUid(document.get(UidFieldMapper.NAME));
             Term tUid = new Term(UidFieldMapper.NAME, uid.toBytesRef());
-            long version = UidField.loadVersion(subReaderContext, tUid);
+            long version;
+            try {
+                version = Versions.loadVersion(subReaderContext.reader(), tUid);
+            } catch (IOException e) {
+                version = Versions.NOT_SET;
+            }
             BytesReference _source = new BytesArray(document.getBinaryValue(SourceFieldMapper.NAME));
             String routing = document.get(RoutingFieldMapper.NAME);
             String parent = document.get(ParentFieldMapper.NAME);
