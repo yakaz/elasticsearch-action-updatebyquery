@@ -370,6 +370,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             BytesReference _source = new BytesArray(document.getBinaryValue(SourceFieldMapper.NAME));
             String routing = document.get(RoutingFieldMapper.NAME);
             String parent = document.get(ParentFieldMapper.NAME);
+            if (parent != null) parent = Uid.idFromUid(parent);
             IndexableField optionalField;
             optionalField = document.getField(TimestampFieldMapper.NAME);
             Number originTimestamp = optionalField == null ? null : optionalField.numericValue();

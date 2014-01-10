@@ -78,6 +78,14 @@ public class UpdateByQueryTests extends AbstractNodesTests {
                         .startObject("_ttl").field("enabled", true).field("store", "yes").endObject()
                         .endObject()
                         .endObject())
+                .addMapping("subtype1", XContentFactory.jsonBuilder()
+                        .startObject()
+                        .startObject("subtype1")
+                        .startObject("_parent").field("type", "type1").endObject()
+                        .startObject("_timestamp").field("enabled", true).field("store", "yes").endObject()
+                        .startObject("_ttl").field("enabled", true).field("store", "yes").endObject()
+                        .endObject()
+                        .endObject())
                 .execute().actionGet();
     }
 
@@ -330,7 +338,16 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         client.prepareIndex()
                 .setIndex("test")
                 .setType("type1")
+                .setId("parentId1")
+                .setTimestamp(String.valueOf(timestamp-1))
+                .setSource("field1", 0, "content", "bar")
+                .execute().actionGet();
+
+        client.prepareIndex()
+                .setIndex("test")
+                .setType("subtype1")
                 .setId("id1")
+                .setParent("parentId1")
                 .setRouting("routing1")
                 .setTimestamp(String.valueOf(timestamp))
                 .setTTL(111211211)
@@ -354,7 +371,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         scriptParams.put("delim", "_");
         UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
                 .setIndices("test")
-                .setTypes("type1")
+                .setTypes("type1", "subtype1")
                 .setIncludeBulkResponses(BulkResponseOption.ALL)
                 .setScript("ctx._source.field1 += 1;\n"+
                         "ctx._source.content = ctx._index" +
@@ -374,10 +391,10 @@ public class UpdateByQueryTests extends AbstractNodesTests {
 
         assertThat(response, notNullValue());
         assertThat(response.mainFailures().length, equalTo(0));
-        assertThat(response.totalHits(), equalTo(1L));
-        assertThat(response.updated(), equalTo(1L));
+        assertThat(response.totalHits(), equalTo(2L));
+        assertThat(response.updated(), equalTo(2L));
         assertThat(response.indexResponses().length, equalTo(1));
-        assertThat(response.indexResponses()[0].countShardResponses(), equalTo(1L));
+        assertThat(response.indexResponses()[0].countShardResponses(), equalTo(2L));
         assertThat(response.indexResponses()[0].failuresByShard().isEmpty(), equalTo(true));
 
         client.admin().indices().prepareRefresh("test").execute().actionGet();
@@ -388,11 +405,16 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(countResponse.getCount(), equalTo(1L));
 
         SearchResponse searchResponse = client.prepareSearch("test").setQuery(matchAllQuery()).execute().actionGet();
-        assertThat(searchResponse.getHits().getTotalHits(), equalTo(1L));
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(2L));
         for (SearchHit hit : searchResponse.getHits().getHits()) {
-            assertThat(hit.getType(), equalTo("type1"));
-            assertThat(hit.getId(), equalTo("id1"));
-            assertThat((String)hit.getSource().get("content"), equalTo("test_type1_id1_type1#id1_null_routing1_"+timestamp+"_111211211_1_foo"));
+            if ("type1".equals(hit.getType())) {
+                assertThat(hit.getId(), equalTo("parentId1"));
+                assertThat((String)hit.getSource().get("content"), equalTo("test_type1_parentId1_type1#parentId1_null_null_"+(timestamp-1)+"_null_1_bar"));
+            } else {
+                assertThat(hit.getType(), equalTo("subtype1"));
+                assertThat(hit.getId(), equalTo("id1"));
+                assertThat((String)hit.getSource().get("content"), equalTo("test_subtype1_id1_subtype1#id1_parentId1_routing1_"+timestamp+"_111211211_1_foo"));
+            }
         }
     }
 
