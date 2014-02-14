@@ -126,7 +126,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         client.admin().indices().prepareRefresh("test").execute().actionGet();
 
         CountResponse countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(0L));
@@ -160,7 +160,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
 
         client.admin().indices().prepareRefresh("test").execute().actionGet();
         countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(numDocs));
@@ -184,7 +184,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
 
         client.admin().indices().prepareRefresh("test").execute().actionGet();
         countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 3).buildAsBytes())
+                .setQuery(termQuery("field1", 3))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(numDocs));
@@ -221,7 +221,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         client.admin().indices().prepareRefresh("*").execute().actionGet();
 
         CountResponse countResponse = client.prepareCount("*")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(0L));
@@ -270,7 +270,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
 
         client.admin().indices().prepareRefresh("*").execute().actionGet();
         countResponse = client.prepareCount("*")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(numDocs));
@@ -356,13 +356,13 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         client.admin().indices().prepareRefresh("test").execute().actionGet();
 
         CountResponse countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 1).buildAsBytes())
+                .setQuery(termQuery("field1", 1))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(1L));
 
         countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(0L));
@@ -399,7 +399,7 @@ public class UpdateByQueryTests extends AbstractNodesTests {
 
         client.admin().indices().prepareRefresh("test").execute().actionGet();
         countResponse = client.prepareCount("test")
-                .setQuery(termQuery("field1", 2).buildAsBytes())
+                .setQuery(termQuery("field1", 2))
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(1L));

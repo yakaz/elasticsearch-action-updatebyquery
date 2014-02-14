@@ -28,8 +28,8 @@ import org.apache.lucene.document.DocumentStoredFieldVisitor;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.FixedBitSet;
-import org.elasticsearch.ElasticSearchException;
-import org.elasticsearch.ElasticSearchIllegalArgumentException;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequest;
@@ -38,6 +38,7 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.cache.recycler.CacheRecycler;
+import org.elasticsearch.cache.recycler.PageCacheRecycler;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
@@ -101,6 +102,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private final ClusterService clusterService;
     private final ScriptService scriptService;
     private final CacheRecycler cacheRecycler;
+    private final PageCacheRecycler pageCacheRecycler;
     private final int batchSize;
 
     @Inject
@@ -111,7 +113,8 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                              IndicesService indicesService,
                                              ClusterService clusterService,
                                              ScriptService scriptService,
-                                             CacheRecycler cacheRecycler) {
+                                             CacheRecycler cacheRecycler,
+                                             PageCacheRecycler pageCacheRecycler) {
         super(settings, threadPool);
         this.bulkAction = bulkAction;
         this.indicesService = indicesService;
@@ -119,13 +122,14 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         this.scriptService = scriptService;
         this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
         this.cacheRecycler = cacheRecycler;
+        this.pageCacheRecycler = pageCacheRecycler;
         transportService.registerHandler(ACTION_NAME, new TransportHandler());
     }
 
     protected void doExecute(final ShardUpdateByQueryRequest request, final ActionListener<ShardUpdateByQueryResponse> listener) {
         String localNodeId = clusterService.state().nodes().localNodeId();
         if (!localNodeId.equals(request.targetNodeId())) {
-            throw new ElasticSearchException("Request arrived on the wrong node. This shouldn't happen!");
+            throw new ElasticsearchException("Request arrived on the wrong node. This shouldn't happen!");
         }
 
         if (request.operationThreaded()) {
@@ -152,8 +156,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 0,
                 shardSearchRequest,
                 null, indexShard.acquireSearcher("update_by_query"), indexService, indexShard,
-                scriptService,
-                cacheRecycler
+                scriptService, cacheRecycler, pageCacheRecycler
         );
         SearchContext.setCurrent(searchContext);
         try {
@@ -216,14 +219,14 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 }
             }
         } catch (Exception e) {
-            throw new ElasticSearchException("Couldn't parse query from source.", e);
+            throw new ElasticsearchException("Couldn't parse query from source.", e);
         }
 
         if (parsedQuery == null) {
-            throw new ElasticSearchException("Query is required");
+            throw new ElasticsearchException("Query is required");
         }
         if (script == null) {
-            throw new ElasticSearchException("Script is required");
+            throw new ElasticsearchException("Script is required");
         }
         context.parsedQuery(parsedQuery);
         ExecutableScript executableScript = scriptService.executable(scriptLang, script, params);
@@ -401,7 +404,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 // we need to unwrap the ctx...
                 updateByQueryContext.scriptContext.putAll((Map<String, Object>) updateByQueryContext.executableScript.unwrap(updateByQueryContext.scriptContext));
             } catch (Exception e) {
-                throw new ElasticSearchIllegalArgumentException("failed to execute script", e);
+                throw new ElasticsearchIllegalArgumentException("failed to execute script", e);
             }
 
             String operation = (String) updateByQueryContext.scriptContext.get("op");

@@ -25,6 +25,7 @@ import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.action.updatebyquery.*;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.UpdateByQueryClient;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.bytes.BytesArray;
@@ -98,7 +99,7 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                 }
             }
 
-            sourceBuilder.query(RestActions.parseQuerySource(request));
+            sourceBuilder.query(RestActions.parseQuerySource(request).buildAsBytes(Requests.CONTENT_TYPE));
             udqRequest.source(sourceBuilder);
         }
 

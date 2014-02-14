@@ -20,7 +20,7 @@
 package org.elasticsearch.action.updatebyquery;
 
 import org.elasticsearch.common.collect.Sets;
-import org.elasticsearch.ElasticSearchGenerationException;
+import org.elasticsearch.ElasticsearchGenerationException;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.support.replication.IndexReplicationOperationRequest;
