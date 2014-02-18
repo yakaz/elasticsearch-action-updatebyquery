@@ -24,7 +24,7 @@ In order to declare this plugin as a dependency, add the following to your `pom.
 ```xml
 <dependency>
     <groupId>com.yakaz.elasticsearch.plugins</groupId>
-    <artifactId>elasticsearch-action-updatebyquery/artifactId>
+    <artifactId>elasticsearch-action-updatebyquery</artifactId>
     <version>1.4.0</version>
 </dependency>
 ```
