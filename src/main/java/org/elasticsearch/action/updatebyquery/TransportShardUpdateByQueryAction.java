@@ -19,38 +19,38 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.DocumentStoredFieldVisitor;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DocumentStoredFieldVisitor;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.util.FixedBitSet;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
-import org.elasticsearch.ExceptionsHelper;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequest;
-import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.support.TransportAction;
-import org.elasticsearch.cache.recycler.CacheRecycler;
-import org.elasticsearch.cache.recycler.PageCacheRecycler;
 import org.elasticsearch.client.Requests;
-import org.elasticsearch.cluster.ClusterService;
-import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Maps;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.util.FixedBitSet;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.common.collect.Tuple;
+import org.elasticsearch.common.lucene.uid.Versions;
+import org.elasticsearch.cache.recycler.CacheRecycler;
+import org.elasticsearch.cache.recycler.PageCacheRecycler;
+import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.TopLevelFixedBitSetCollector;
-import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -58,7 +58,12 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.mapper.Uid;
-import org.elasticsearch.index.mapper.internal.*;
+import org.elasticsearch.index.mapper.internal.ParentFieldMapper;
+import org.elasticsearch.index.mapper.internal.RoutingFieldMapper;
+import org.elasticsearch.index.mapper.internal.SourceFieldMapper;
+import org.elasticsearch.index.mapper.internal.TTLFieldMapper;
+import org.elasticsearch.index.mapper.internal.TimestampFieldMapper;
+import org.elasticsearch.index.mapper.internal.UidFieldMapper;
 import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.ShardId;
@@ -75,7 +80,12 @@ import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Transport action that translates the shard update by query request into a bulk request. All actions are performed
@@ -101,28 +111,27 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private final IndicesService indicesService;
     private final ClusterService clusterService;
     private final ScriptService scriptService;
+    private final int batchSize;
     private final CacheRecycler cacheRecycler;
     private final PageCacheRecycler pageCacheRecycler;
-    private final int batchSize;
 
     @Inject
     public TransportShardUpdateByQueryAction(Settings settings,
                                              ThreadPool threadPool,
                                              TransportShardBulkAction bulkAction,
                                              TransportService transportService,
-                                             IndicesService indicesService,
+                                             CacheRecycler cacheRecycler, IndicesService indicesService,
                                              ClusterService clusterService,
                                              ScriptService scriptService,
-                                             CacheRecycler cacheRecycler,
                                              PageCacheRecycler pageCacheRecycler) {
         super(settings, threadPool);
         this.bulkAction = bulkAction;
+        this.cacheRecycler = cacheRecycler;
         this.indicesService = indicesService;
         this.clusterService = clusterService;
         this.scriptService = scriptService;
-        this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
-        this.cacheRecycler = cacheRecycler;
         this.pageCacheRecycler = pageCacheRecycler;
+        this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
         transportService.registerHandler(ACTION_NAME, new TransportHandler());
     }
 
@@ -173,6 +182,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
+                searchContext.release();
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(
@@ -230,7 +240,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
         context.parsedQuery(parsedQuery);
         ExecutableScript executableScript = scriptService.executable(scriptLang, script, params);
-        return new UpdateByQueryContext(context, script, batchSize, clusterService.state(), executableScript);
+        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, executableScript);
     }
 
 
@@ -506,19 +516,20 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
 class UpdateByQueryContext {
 
     final SearchContext searchContext;
-    final String scriptString;
     final List<BulkItemRequest> bulkItemRequestsBulkList;
     final ClusterState clusterState;
 
     final Map<String, Object> scriptContext;
     final ExecutableScript executableScript;
+    final String scriptString;
 
-    UpdateByQueryContext(SearchContext searchContext, String scriptString, int batchSize, ClusterState clusterState, ExecutableScript executableScript) {
+    UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString, ExecutableScript executableScript) {
         this.searchContext = searchContext;
-        this.scriptString = scriptString;
         this.clusterState = clusterState;
         this.bulkItemRequestsBulkList = new ArrayList<BulkItemRequest>(batchSize);
+
         this.scriptContext = new HashMap<String, Object>();
         this.executableScript = executableScript;
+        this.scriptString = scriptString;
     }
 }
