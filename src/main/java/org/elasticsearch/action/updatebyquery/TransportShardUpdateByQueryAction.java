@@ -171,7 +171,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
-                searchContext.release();
+                searchContext.clearAndRelease();
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(
@@ -181,7 +181,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         } catch (Throwable t) {
             // If we end up here then BatchedShardUpdateByQueryExecutor#finalizeBulkActions isn't invoked
             // so we need to release the search context.
-            searchContext.release();
+            searchContext.clearAndRelease();
             listener.onFailure(t);
         } finally {
             SearchContext.removeCurrent();
@@ -328,7 +328,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         private void finalizeBulkActions(Throwable e) {
-            updateByQueryContext.searchContext.release();
+            updateByQueryContext.searchContext.clearAndRelease();
             BulkItemResponse[] bulkResponses = receivedBulkItemResponses.toArray(new BulkItemResponse[receivedBulkItemResponses.size()]);
             receivedBulkItemResponses.clear();
             ShardUpdateByQueryResponse finalResponse = new ShardUpdateByQueryResponse(
