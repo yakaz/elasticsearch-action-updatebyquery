@@ -27,6 +27,7 @@ import org.elasticsearch.action.updatebyquery.*;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -40,7 +41,6 @@ import org.elasticsearch.rest.action.support.RestXContentBuilder;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.elasticsearch.common.Strings.splitStringByCommaToArray;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.OK;
 
@@ -61,8 +61,8 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
-                splitStringByCommaToArray(request.param("index")),
-                splitStringByCommaToArray(request.param("type"))
+                Strings.splitStringByCommaToArray(request.param("index")),
+                Strings.splitStringByCommaToArray(request.param("type"))
         );
         udqRequest.listenerThreaded(false);
         String replicationType = request.param("replication");

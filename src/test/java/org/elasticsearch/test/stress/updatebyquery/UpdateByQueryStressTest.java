@@ -33,6 +33,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -95,10 +96,11 @@ public class UpdateByQueryStressTest {
                     .execute()
                     .actionGet();
 
-            System.out.printf("Update by query took: %d ms and matches with %d documents\n", response.tookInMillis(), response.totalHits());
-            System.out.printf("and %d documents have actually successfully been updated.\n", response.updated());
+            System.out.printf(Locale.ENGLISH, "Update by query took: %d ms and matches with %d documents\n", response.tookInMillis(), response.totalHits());
+            System.out.printf(Locale.ENGLISH, "and %d documents have actually successfully been updated.\n", response.updated());
             if (response.totalHits() != BATCH * NUMBER_OF_INDICES) {
                 System.err.printf(
+                        Locale.ENGLISH,
                         "Number of matches is incorrect! Expected %d but was %d\n",
                         BATCH * NUMBER_OF_INDICES,
                         response.totalHits()
@@ -107,6 +109,7 @@ public class UpdateByQueryStressTest {
 
             if (response.indexResponses().length != NUMBER_OF_INDICES) {
                 System.err.printf(
+                        Locale.ENGLISH,
                         "Number of index sub responses is incorrect! Expected %d but was %d\n",
                         BATCH,
                         response.indexResponses().length
@@ -116,9 +119,10 @@ public class UpdateByQueryStressTest {
             for (IndexUpdateByQueryResponse indexResponse : response.indexResponses()) {
                 for (Map.Entry<Integer, BulkItemResponse[]> bulkItemResponses : indexResponse.responsesByShard().entrySet()) {
                     for (BulkItemResponse bulkItemResponse : bulkItemResponses.getValue()) {
-                        IndexResponse indexRes = (IndexResponse) bulkItemResponse.getResponse();
+                        IndexResponse indexRes = bulkItemResponse.getResponse();
                         if (indexRes.getVersion() != 2) {
                             System.out.printf(
+                                    Locale.ENGLISH,
                                     "Version doesn't match for id[%s] expected version 2, but was %d\n",
                                     indexRes.getId(),
                                     indexRes.getVersion()

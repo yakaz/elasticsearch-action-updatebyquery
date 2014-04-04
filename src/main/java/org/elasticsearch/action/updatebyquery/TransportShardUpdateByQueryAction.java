@@ -171,6 +171,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
+                searchContext.release();
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(

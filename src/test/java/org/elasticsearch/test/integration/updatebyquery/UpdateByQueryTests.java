@@ -49,6 +49,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.Matchers.arrayWithSize;
 
 public class UpdateByQueryTests extends AbstractNodesTests {
 
@@ -325,6 +326,34 @@ public class UpdateByQueryTests extends AbstractNodesTests {
         assertThat(client.prepareGet("alias0", "type1", "2").execute().actionGet().isExists(), equalTo(false));
         assertThat(client.prepareGet("alias1", "type1", "3").execute().actionGet().isExists(), equalTo(true));
         assertThat(client.prepareGet("alias1", "type1", "4").execute().actionGet().isExists(), equalTo(false));
+    }
+
+    @Test
+    public void testUpdateByQuery_noMatches() throws Exception {
+        createIndex("test");
+        client.prepareIndex("test", "type1", "1").setSource("field1", 1).execute().actionGet();
+        client.admin().indices().prepareRefresh("test").execute().actionGet();
+
+        CountResponse countResponse = client.prepareCount("test")
+                .setQuery(termQuery("field2", 1)).get();
+        assertThat(countResponse.getCount(), equalTo(0L));
+
+        Map<String, Object> scriptParams = new HashMap<String, Object>();
+        UpdateByQueryResponse response = updateByQueryClientWrapper.prepareUpdateByQuery()
+                .setIndices("test")
+                .setTypes("type1")
+                .setIncludeBulkResponses(BulkResponseOption.ALL)
+                .setScript("ctx._source.field1 += 1").setScriptParams(scriptParams)
+                .setQuery(termQuery("field2", 1))
+                .execute()
+                .actionGet();
+
+        assertThat(response, notNullValue());
+        assertThat(response.mainFailures().length, equalTo(0));
+        assertThat(response.totalHits(), equalTo(0l));
+        assertThat(response.updated(), equalTo(0l));
+        assertThat(response.indexResponses(), arrayWithSize(1));
+        assertThat(response.indexResponses()[0].responsesByShard().isEmpty(), is(true));
     }
 
     @Test
