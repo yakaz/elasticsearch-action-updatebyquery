@@ -19,21 +19,6 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DocumentStoredFieldVisitor;
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.index.Term;
-import org.elasticsearch.ElasticsearchIllegalArgumentException;
-import org.elasticsearch.action.ActionRequest;
-import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.Requests;
-import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.cluster.metadata.MetaData;
-import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.DocIdSetIterator;
@@ -43,8 +28,8 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.support.TransportAction;
-import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.lucene.uid.Versions;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
 import org.elasticsearch.cluster.ClusterService;
@@ -52,24 +37,17 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.TopLevelFixedBitSetCollector;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.fieldvisitor.JustUidFieldsVisitor;
 import org.elasticsearch.index.mapper.Uid;
-import org.elasticsearch.index.mapper.internal.ParentFieldMapper;
-import org.elasticsearch.index.mapper.internal.RoutingFieldMapper;
-import org.elasticsearch.index.mapper.internal.SourceFieldMapper;
-import org.elasticsearch.index.mapper.internal.TTLFieldMapper;
-import org.elasticsearch.index.mapper.internal.TimestampFieldMapper;
-import org.elasticsearch.index.mapper.internal.UidFieldMapper;
 import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
-import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.DefaultSearchContext;
 import org.elasticsearch.search.internal.SearchContext;
@@ -81,11 +59,8 @@ import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Transport action that translates the shard update by query request into a bulk request. All actions are performed
@@ -96,17 +71,6 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
 
     public final static String ACTION_NAME = UpdateByQueryAction.NAME + "/shard";
 
-    private static final Set<String> fields = new HashSet<String>();
-
-    static {
-        fields.add(RoutingFieldMapper.NAME);
-        fields.add(ParentFieldMapper.NAME);
-        fields.add(TTLFieldMapper.NAME);
-        fields.add(TimestampFieldMapper.NAME);
-        fields.add(SourceFieldMapper.NAME);
-        fields.add(UidFieldMapper.NAME);
-    }
-
     private final TransportShardBulkAction bulkAction;
     private final IndicesService indicesService;
     private final ClusterService clusterService;
@@ -114,6 +78,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private final int batchSize;
     private final CacheRecycler cacheRecycler;
     private final PageCacheRecycler pageCacheRecycler;
+    private final BigArrays bigArrays;
 
     @Inject
     public TransportShardUpdateByQueryAction(Settings settings,
@@ -123,7 +88,8 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                              CacheRecycler cacheRecycler, IndicesService indicesService,
                                              ClusterService clusterService,
                                              ScriptService scriptService,
-                                             PageCacheRecycler pageCacheRecycler) {
+                                             PageCacheRecycler pageCacheRecycler,
+                                             BigArrays bigArrays) {
         super(settings, threadPool);
         this.bulkAction = bulkAction;
         this.cacheRecycler = cacheRecycler;
@@ -131,6 +97,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         this.clusterService = clusterService;
         this.scriptService = scriptService;
         this.pageCacheRecycler = pageCacheRecycler;
+        this.bigArrays = bigArrays;
         this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
         transportService.registerHandler(ACTION_NAME, new TransportHandler());
     }
@@ -165,7 +132,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 0,
                 shardSearchRequest,
                 null, indexShard.acquireSearcher("update_by_query"), indexService, indexShard,
-                scriptService, cacheRecycler, pageCacheRecycler
+                scriptService, cacheRecycler, pageCacheRecycler, bigArrays
         );
         SearchContext.setCurrent(searchContext);
         try {
@@ -239,8 +206,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             throw new ElasticsearchException("Script is required");
         }
         context.parsedQuery(parsedQuery);
-        ExecutableScript executableScript = scriptService.executable(scriptLang, script, params);
-        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, executableScript);
+        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, scriptLang, params);
     }
 
 
@@ -357,120 +323,18 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                List<BulkItemRequest> bulkItemRequests) throws IOException {
             int counter = 0;
             for (int docID = iterator.nextDoc(); docID != DocIdSetIterator.NO_MORE_DOCS; docID = iterator.nextDoc()) {
-                DocumentStoredFieldVisitor fieldVisitor = new DocumentStoredFieldVisitor(fields);
+                JustUidFieldsVisitor fieldVisitor = new JustUidFieldsVisitor();
                 indexReader.document(docID, fieldVisitor);
-                Document document = fieldVisitor.getDocument();
-                int readerIndex = ReaderUtil.subIndex(docID, indexReader.leaves());
-                AtomicReaderContext subReaderContext = indexReader.leaves().get(readerIndex);
-                bulkItemRequests.add(new BulkItemRequest(counter, createRequest(request, document, subReaderContext)));
+                Uid uid = fieldVisitor.uid();
+                UpdateRequest updateRequest = new UpdateRequest(request.index(), uid.type(), uid.id())
+                        .scriptLang(updateByQueryContext.scriptLang)
+                        .scriptParams(updateByQueryContext.scriptParams)
+                        .script(updateByQueryContext.scriptString);
+                bulkItemRequests.add(new BulkItemRequest(counter, updateRequest));
 
                 if (++counter == batchSize) {
                     break;
                 }
-            }
-        }
-
-        // TODO: this is currently very similar to what we do in the update action, need to figure out how to nicely consolidate the two
-        private ActionRequest createRequest(ShardUpdateByQueryRequest request, Document document, AtomicReaderContext subReaderContext) {
-            Uid uid = Uid.createUid(document.get(UidFieldMapper.NAME));
-            Term tUid = new Term(UidFieldMapper.NAME, uid.toBytesRef());
-            long version;
-            try {
-                version = Versions.loadVersion(subReaderContext.reader(), tUid);
-            } catch (IOException e) {
-                version = Versions.NOT_SET;
-            }
-            BytesReference _source = new BytesArray(document.getBinaryValue(SourceFieldMapper.NAME));
-            String routing = document.get(RoutingFieldMapper.NAME);
-            String parent = document.get(ParentFieldMapper.NAME);
-            if (parent != null) parent = Uid.idFromUid(parent);
-            IndexableField optionalField;
-            optionalField = document.getField(TimestampFieldMapper.NAME);
-            Number originTimestamp = optionalField == null ? null : optionalField.numericValue();
-            optionalField = document.getField(TTLFieldMapper.NAME);
-            Number originTtl = optionalField == null ? null : optionalField.numericValue();
-            if (originTtl != null && originTimestamp != null)
-                // Unshift TTL from timestamp
-                originTtl = originTtl.longValue() - originTimestamp.longValue();
-
-            Tuple<XContentType, Map<String, Object>> sourceAndContent = XContentHelper.convertToMap(_source, true);
-            final XContentType updateSourceContentType = sourceAndContent.v1();
-
-            updateByQueryContext.scriptContext.clear();
-            updateByQueryContext.scriptContext.put("_index", request.index());
-            updateByQueryContext.scriptContext.put("_uid", uid.toString());
-            updateByQueryContext.scriptContext.put("_type", uid.type());
-            updateByQueryContext.scriptContext.put("_id", uid.id());
-            updateByQueryContext.scriptContext.put("_version", version);
-            updateByQueryContext.scriptContext.put("_source", sourceAndContent.v2());
-            updateByQueryContext.scriptContext.put("_routing", routing);
-            updateByQueryContext.scriptContext.put("_parent", parent);
-            updateByQueryContext.scriptContext.put("_timestamp", originTimestamp);
-            updateByQueryContext.scriptContext.put("_ttl", originTtl);
-
-            try {
-                updateByQueryContext.executableScript.setNextVar("ctx", updateByQueryContext.scriptContext);
-                updateByQueryContext.executableScript.run();
-                // we need to unwrap the ctx...
-                updateByQueryContext.scriptContext.putAll((Map<String, Object>) updateByQueryContext.executableScript.unwrap(updateByQueryContext.scriptContext));
-            } catch (Exception e) {
-                throw new ElasticsearchIllegalArgumentException("failed to execute script", e);
-            }
-
-            String operation = (String) updateByQueryContext.scriptContext.get("op");
-            Object fetchedTimestamp = updateByQueryContext.scriptContext.get("_timestamp");
-            String timestamp = null;
-            if (fetchedTimestamp != null) {
-                if (fetchedTimestamp instanceof String) {
-                    timestamp = String.valueOf(TimeValue.parseTimeValue((String) fetchedTimestamp, null).millis());
-                } else {
-                    timestamp = fetchedTimestamp.toString();
-                }
-            }
-            Object fetchedTTL = updateByQueryContext.scriptContext.get("_ttl");
-            Long ttl = null;
-            if (fetchedTTL != null) {
-                if (fetchedTTL instanceof Number) {
-                    ttl = ((Number) fetchedTTL).longValue();
-                } else {
-                    ttl = TimeValue.parseTimeValue((String) fetchedTTL, null).millis();
-                }
-            }
-
-            Map<String, Object> updatedSourceAsMap = (Map<String, Object>) updateByQueryContext.scriptContext.get("_source");
-            if (operation == null || "index".equals(operation)) {
-                IndexRequest indexRequest = Requests.indexRequest(request.index()).type(uid.type()).id(uid.id())
-                        .routing(routing)
-                        .parent(parent)
-                        .source(updatedSourceAsMap, updateSourceContentType)
-                        .version(version)
-                        .replicationType(request.replicationType())
-                        .consistencyLevel(request.consistencyLevel())
-                        .timestamp(timestamp)
-                        .ttl(ttl);
-                indexRequest.operationThreaded(false);
-
-                MetaData metaData = updateByQueryContext.clusterState.metaData();
-                MappingMetaData mappingMd = null;
-                if (metaData.hasIndex(indexRequest.index())) {
-                    mappingMd = metaData.index(indexRequest.index()).mappingOrDefault(indexRequest.type());
-                }
-                String aliasOrIndex = indexRequest.index();
-                indexRequest.index(updateByQueryContext.clusterState.metaData().concreteIndex(indexRequest.index()));
-                indexRequest.process(metaData, aliasOrIndex, mappingMd, false);
-                return indexRequest;
-            } else if ("delete".equals(operation)) {
-                DeleteRequest deleteRequest = Requests.deleteRequest(request.index()).type(uid.type()).id(uid.id())
-                        .routing(routing)
-                        .parent(parent)
-                        .version(version)
-                        .replicationType(request.replicationType())
-                        .consistencyLevel(request.consistencyLevel());
-                deleteRequest.operationThreaded(false);
-                return deleteRequest;
-            } else {
-                logger.warn("[{}][{}] used update operation [{}] for script [{}], doing nothing...", request.index(), request.shardId(), operation, updateByQueryContext.scriptString);
-                return null;
             }
         }
 
@@ -519,17 +383,16 @@ class UpdateByQueryContext {
     final List<BulkItemRequest> bulkItemRequestsBulkList;
     final ClusterState clusterState;
 
-    final Map<String, Object> scriptContext;
-    final ExecutableScript executableScript;
     final String scriptString;
+    final String scriptLang;
+    final Map<String, Object> scriptParams;
 
-    UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString, ExecutableScript executableScript) {
+    UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString, String scriptLang, Map<String, Object> scriptParams) {
         this.searchContext = searchContext;
         this.clusterState = clusterState;
         this.bulkItemRequestsBulkList = new ArrayList<BulkItemRequest>(batchSize);
-
-        this.scriptContext = new HashMap<String, Object>();
-        this.executableScript = executableScript;
         this.scriptString = scriptString;
+        this.scriptLang = scriptLang;
+        this.scriptParams = scriptParams;
     }
 }

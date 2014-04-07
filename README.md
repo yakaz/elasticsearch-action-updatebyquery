@@ -4,14 +4,19 @@ ElasticSearch Update By Query Plugin
 The update by query API allows all documents that with the query to be updated with a script.
 This is experimental.
 
-This plugin is an adaptation of [elasticsearch/elasticsearch#2230][es#2230].
+This plugin is an adaptation of [elasticsearch/elasticsearch#2230][es#2230], see [@martijnvg's branch][martijnvg-ubq].
+
+Upgrade notes
+-------------
+
+* v2.0.0 dropped the support of the added context variables, see [the corresponding section](#context-variables).
 
 Installation
 -----------
 
 Simply run at the root of your ElasticSearch v0.20.2+ installation:
 
-    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/1.6.1
+    bin/plugin -install com.yakaz.elasticsearch.plugins/elasticsearch-action-updatebyquery/2.0.0
 
 This will download the plugin from the Central Maven Repository.
 
@@ -25,7 +30,7 @@ In order to declare this plugin as a dependency, add the following to your `pom.
 <dependency>
     <groupId>com.yakaz.elasticsearch.plugins</groupId>
     <artifactId>elasticsearch-action-updatebyquery</artifactId>
-    <version>1.6.1</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -34,11 +39,13 @@ Version matrix:
     ┌───────────────────────────────┬────────────────────────┐
     │ Update By Query Action Plugin │ ElasticSearch          │
     ├───────────────────────────────┼────────────────────────┤
+    │ 2.0.x                         │ 1.1.0 ─► (?)           │
+    ├───────────────────────────────┼────────────────────────┤
     │ 1.6.x                         │ 1.0.0 ─► 1.0.2         │
     ├───────────────────────────────┼────────────────────────┤
     │ 1.5.x                         │ 1.0.0.Beta1            │
     ├───────────────────────────────┼────────────────────────┤
-    │ 1.4.1                         │ 0.90.10 ─► (0.90.11)   │
+    │ 1.4.x                         │ 0.90.10 ─► (0.90.13)   │
     ├───────────────────────────────┼────────────────────────┤
     │ 1.4.0                         │ 0.90.6 ─► 0.90.9       │
     ├───────────────────────────────┼────────────────────────┤
@@ -134,32 +141,22 @@ Additional general options in request body:
 Context variables
 -----------------
 
-The script has access to the following variables:
+NOTE: v2.0.0 of this plugin dropped the support of additional context variables in favor of a unified code path with the Update feature.
+
+Just like in the Update API, the script has access to the following variables:
 
 * `ctx`
-  * `_index`
-  * `_uid`
-  * `_type`
-  * `_id`
-  * `_version`
   * `_source`
-  * `_routing`
-  * `_parent`
-  * `_timestamp` (in milliseconds)
-  * `_ttl` (in milliseconds)
 
 ### Output variables
 
-You may update the following variables:
+Just like in the Update API, you may update the following variables:
 
 * `ctx`
   * `_timestamp`
   * `_ttl`
 
-They are parsed as time values: either milliseconds since epoch, or a duration string like `"30m"`.
-If you wish to change the timestamp of your document, to make it more recent, either set a new value to `_timestamp` or set it to `null`.
-Otherwise the previous `_timestamp` is preserved.
-`_ttl` is preserved too if you don't change or remove it.
 
 
 [es#2230]: https://github.com/elasticsearch/elasticsearch/issues/2230
+[martijnvg-ubq]: https://github.com/martijnvg/elasticsearch/tree/updatebyquery
