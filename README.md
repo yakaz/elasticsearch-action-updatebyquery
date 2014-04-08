@@ -141,16 +141,18 @@ Additional general options in request body:
 Context variables
 -----------------
 
-NOTE: v2.0.0 of this plugin dropped the support of additional context variables in favor of a unified code path with the Update feature.
+NOTE: v2.0.0 of this plugin dropped the support of additional context variables in favor of a unified code path with the Update API.
+Pull request [elasticsearch/elasticsearch#5724][es#5724] aims at restoring them (except `_uid`).
+As such, the context variables available through the update by query feature are the same as those available in the Update API scripts.
 
-Just like in the Update API, the script has access to the following variables:
+Just like in the Update API, the script has access to the following variables (as of Elasticsearch 1.1.0):
 
 * `ctx`
   * `_source`
 
 ### Output variables
 
-Just like in the Update API, you may update the following variables:
+Just like in the Update API, you may update the following variables (as of Elasticsearch 1.1.0):
 
 * `ctx`
   * `_timestamp`
@@ -160,3 +162,4 @@ Just like in the Update API, you may update the following variables:
 
 [es#2230]: https://github.com/elasticsearch/elasticsearch/issues/2230
 [martijnvg-ubq]: https://github.com/martijnvg/elasticsearch/tree/updatebyquery
+[es#5724]: https://github.com/elasticsearch/elasticsearch/pull/5724
