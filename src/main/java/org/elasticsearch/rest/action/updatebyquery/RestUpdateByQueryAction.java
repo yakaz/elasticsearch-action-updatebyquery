@@ -116,13 +116,11 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                     builder.field(Fields.UPDATED, response.updated());
 
                     if (response.hasFailures()) {
-                        builder.startObject(Fields.ERRORS);
-                        builder.startArray();
+                        builder.startArray(Fields.ERRORS);
                         for (String failure : response.mainFailures()) {
                             builder.field(Fields.ERROR, failure);
                         }
                         builder.endArray();
-                        builder.endObject();
                     }
 
                     if (response.indexResponses().length != 0) {
