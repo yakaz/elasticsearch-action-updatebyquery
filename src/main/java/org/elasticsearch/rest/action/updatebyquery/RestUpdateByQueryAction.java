@@ -19,11 +19,21 @@
 
 package org.elasticsearch.rest.action.updatebyquery;
 
+import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestStatus.OK;
+
+import java.io.IOException;
+import java.util.Map;
+
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.support.replication.ReplicationType;
-import org.elasticsearch.action.updatebyquery.*;
+import org.elasticsearch.action.updatebyquery.BulkResponseOption;
+import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
+import org.elasticsearch.action.updatebyquery.UpdateByQueryRequest;
+import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
+import org.elasticsearch.action.updatebyquery.UpdateByQuerySourceBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
@@ -35,15 +45,12 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.rest.*;
+import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.BytesRestResponse;
+import org.elasticsearch.rest.RestChannel;
+import org.elasticsearch.rest.RestController;
+import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.support.RestActions;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
-
-import java.io.IOException;
-import java.util.Map;
-
-import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.OK;
 
 /**
  * Rest handler for update by query requests.
@@ -108,7 +115,6 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
             public void onResponse(UpdateByQueryResponse response) {
                 try {
                     XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
-
                     builder.startObject();
                     builder.field(Fields.OK, !response.hasFailures());
                     builder.field(Fields.TOOK, response.tookInMillis());
@@ -167,7 +173,7 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                         builder.endArray();
                     }
                     builder.endObject();
-                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
+                    channel.sendResponse(new BytesRestResponse(OK, builder));
                 } catch (Exception e) {
                     onFailure(e);
                 }
