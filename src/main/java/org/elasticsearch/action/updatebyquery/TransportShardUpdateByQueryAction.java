@@ -19,21 +19,31 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.elasticsearch.common.collect.Maps;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.FixedBitSet;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.bulk.*;
+import org.elasticsearch.action.bulk.BulkItemRequest;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkShardRequest;
+import org.elasticsearch.action.bulk.BulkShardResponse;
+import org.elasticsearch.action.bulk.PublicBulkShardRequest;
+import org.elasticsearch.action.bulk.PublicBulkShardResponse;
+import org.elasticsearch.action.bulk.TransportShardBulkAction;
 import org.elasticsearch.action.support.TransportAction;
-import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.TopLevelFixedBitSetCollector;
 import org.elasticsearch.common.settings.Settings;
@@ -51,16 +61,12 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.DefaultSearchContext;
 import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.internal.SearchContext.Lifetime;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.BaseTransportRequestHandler;
 import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportService;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Transport action that translates the shard update by query request into a bulk request. All actions are performed
@@ -149,7 +155,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
-                searchContext.clearAndRelease();
+                searchContext.clearReleasables(Lifetime.CONTEXT);
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(
@@ -159,7 +165,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         } catch (Throwable t) {
             // If we end up here then BatchedShardUpdateByQueryExecutor#finalizeBulkActions isn't invoked
             // so we need to release the search context.
-            searchContext.clearAndRelease();
+        	searchContext.clearReleasables(Lifetime.CONTEXT);
             listener.onFailure(t);
         } finally {
             SearchContext.removeCurrent();
@@ -305,7 +311,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         private void finalizeBulkActions(Throwable e) {
-            updateByQueryContext.searchContext.clearAndRelease();
+            updateByQueryContext.searchContext.clearReleasables(Lifetime.CONTEXT);
             BulkItemResponse[] bulkResponses = receivedBulkItemResponses.toArray(new BulkItemResponse[receivedBulkItemResponses.size()]);
             receivedBulkItemResponses.clear();
             ShardUpdateByQueryResponse finalResponse = new ShardUpdateByQueryResponse(
