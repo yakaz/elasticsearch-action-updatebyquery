@@ -272,7 +272,6 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .setQuery(matchAllQuery())
                 .setScript("ctx.op = \"delete\"")
                 .execute().actionGet();
-
         assertThat(response.totalHits(), equalTo(1L));
         assertThat(response.updated(), equalTo(1L));
 
@@ -281,7 +280,6 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .setQuery(matchAllQuery())
                 .setScript("ctx.op = \"delete\"")
                 .execute().actionGet();
-
         assertThat(response.totalHits(), equalTo(2L));
         assertThat(response.updated(), equalTo(2L));
 
