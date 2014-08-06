@@ -127,6 +127,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         IndexShard indexShard = indexService.shardSafe(request.shardId());
         ShardSearchRequest shardSearchRequest = new ShardSearchRequest();
         shardSearchRequest.types(request.types());
+        System.out.println(request.filteringAliases());
         shardSearchRequest.filteringAliases(request.filteringAliases());
         SearchContext searchContext = new DefaultSearchContext(
                 0,
@@ -149,7 +150,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
-                searchContext.clearAndRelease();
+                searchContext.close();
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(
@@ -159,7 +160,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         } catch (Throwable t) {
             // If we end up here then BatchedShardUpdateByQueryExecutor#finalizeBulkActions isn't invoked
             // so we need to release the search context.
-            searchContext.clearAndRelease();
+            searchContext.close();
             listener.onFailure(t);
         } finally {
             SearchContext.removeCurrent();
@@ -305,7 +306,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         private void finalizeBulkActions(Throwable e) {
-            updateByQueryContext.searchContext.clearAndRelease();
+            updateByQueryContext.searchContext.close();
             BulkItemResponse[] bulkResponses = receivedBulkItemResponses.toArray(new BulkItemResponse[receivedBulkItemResponses.size()]);
             receivedBulkItemResponses.clear();
             ShardUpdateByQueryResponse finalResponse = new ShardUpdateByQueryResponse(

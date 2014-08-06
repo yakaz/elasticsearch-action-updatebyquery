@@ -19,7 +19,7 @@
 
 package org.elasticsearch.rest.action.updatebyquery;
 
-import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.rest.action.support.RestBuilderListener;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.support.replication.ReplicationType;
@@ -32,18 +32,13 @@ import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentBuilderString;
-import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.*;
 import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.support.RestActions;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.OK;
 
 /**
  * Rest handler for update by query requests.
@@ -103,17 +98,17 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
             udqRequest.source(sourceBuilder);
         }
 
-        updateByQueryClient.updateByQuery(udqRequest, new ActionListener<UpdateByQueryResponse>() {
+        updateByQueryClient.updateByQuery(udqRequest, new RestBuilderListener<UpdateByQueryResponse>(channel) {
+            @Override
+            public RestResponse buildResponse(UpdateByQueryResponse response, XContentBuilder builder) throws Exception {
 
-            public void onResponse(UpdateByQueryResponse response) {
-                try {
-                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
+                    builder = channel.newBuilder();
 
-                    builder.startObject();
-                    builder.field(Fields.OK, !response.hasFailures());
-                    builder.field(Fields.TOOK, response.tookInMillis());
-                    builder.field(Fields.TOTAL, response.totalHits());
-                    builder.field(Fields.UPDATED, response.updated());
+                    builder.startObject()
+                        .field(Fields.OK, !response.hasFailures())
+                        .field(Fields.TOOK, response.tookInMillis())
+                        .field(Fields.TOTAL, response.totalHits())
+                        .field(Fields.UPDATED, response.updated());
 
                     if (response.hasFailures()) {
                         builder.startArray(Fields.ERRORS);
@@ -167,19 +162,12 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                         builder.endArray();
                     }
                     builder.endObject();
-                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
-                } catch (Exception e) {
-                    onFailure(e);
+                    RestStatus status = RestStatus.OK;
+                    if (!response.hasFailures()) {
+                        status = RestStatus.CREATED;
+                    }
+                    return new BytesRestResponse(status, builder);
                 }
-            }
-
-            public void onFailure(Throwable e) {
-                try {
-                    channel.sendResponse(new XContentThrowableRestResponse(request, e));
-                } catch (IOException e1) {
-                    logger.error("Failed to send failure response", e1);
-                }
-            }
         });
     }
 

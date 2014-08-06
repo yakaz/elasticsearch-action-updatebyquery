@@ -81,7 +81,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
     protected void doExecute(UpdateByQueryRequest request, ActionListener<UpdateByQueryResponse> listener) {
         long startTime = System.currentTimeMillis();
         MetaData metaData = clusterService.state().metaData();
-        String[] concreteIndices = metaData.concreteIndices(request.indices(), IndicesOptions.lenient());
+        String[] concreteIndices = metaData.concreteIndices(IndicesOptions.lenientExpandOpen() ,request.indices());
         Map<String, Set<String>> routingMap = metaData.resolveSearchRouting(request.routing(), request.indices());
         if (concreteIndices.length == 1) {
             doExecuteIndexRequest(request, metaData, concreteIndices[0], routingMap, new SingleIndexUpdateByQueryActionListener(startTime, listener));
@@ -177,6 +177,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
 
     protected void doExecuteIndexRequest(UpdateByQueryRequest request, MetaData metaData, String concreteIndex,
                                          @Nullable Map<String, Set<String>> routingMap, ActionListener<IndexUpdateByQueryResponse> listener) {
+        System.out.println(request.indices());
         String[] filteringAliases = metaData.filteringAliases(concreteIndex, request.indices());
         Set<String> routing = null;
         if (routingMap != null) {
