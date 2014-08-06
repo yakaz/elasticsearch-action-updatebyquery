@@ -248,9 +248,9 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
         client().admin().indices().prepareCreate("test").execute().actionGet();
         client().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
 
-        ///client().admin().indices().prepareAliases().addAliasAction(
-        ///        newAddAliasAction("test", "alias0").routing("0")
-        ///).execute().actionGet();
+        client().admin().indices().prepareAliases().addAliasAction(
+                newAddAliasAction("test", "alias0").routing("0")
+        ).execute().actionGet();
 
         client().admin().indices().prepareAliases().addAliasAction(
                 newAddAliasAction("test", "alias1").filter(FilterBuilders.termFilter("field", "value2")).routing("1")
@@ -276,17 +276,17 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
         assertThat(response.totalHits(), equalTo(1L));
         assertThat(response.updated(), equalTo(1L));
 
-        /**response = updateByQueryClient().prepareUpdateByQuery()
+        response = updateByQueryClient().prepareUpdateByQuery()
                 .setIndices("alias0")
                 .setQuery(matchAllQuery())
                 .setScript("ctx.op = \"delete\"")
                 .execute().actionGet();
 
         assertThat(response.totalHits(), equalTo(2L));
-        assertThat(response.updated(), equalTo(2L));**/
+        assertThat(response.updated(), equalTo(2L));
 
-        //assertThat(client().prepareGet("alias0", "type1", "1").execute().actionGet().isExists(), equalTo(false));
-        //assertThat(client().prepareGet("alias0", "type1", "2").execute().actionGet().isExists(), equalTo(false));
+        assertThat(client().prepareGet("alias0", "type1", "1").execute().actionGet().isExists(), equalTo(false));
+        assertThat(client().prepareGet("alias0", "type1", "2").execute().actionGet().isExists(), equalTo(false));
         assertThat(client().prepareGet("alias1", "type1", "3").execute().actionGet().isExists(), equalTo(true));
         assertThat(client().prepareGet("alias1", "type1", "4").execute().actionGet().isExists(), equalTo(false));
     }
