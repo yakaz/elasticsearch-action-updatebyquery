@@ -19,13 +19,13 @@
 
 package org.elasticsearch.action.updatebyquery;
 
-import org.elasticsearch.action.Action;
+import org.elasticsearch.action.ClientAction;
 import org.elasticsearch.client.Client;
 
 /**
  * Entry point from client to transport actions.
  */
-public class UpdateByQueryAction extends Action<UpdateByQueryRequest, UpdateByQueryResponse, UpdateByQueryRequestBuilder> {
+public class UpdateByQueryAction extends ClientAction<UpdateByQueryRequest, UpdateByQueryResponse, UpdateByQueryRequestBuilder> {
 
     public static final UpdateByQueryAction INSTANCE = new UpdateByQueryAction();
     public static final String NAME = "updateByQuery";

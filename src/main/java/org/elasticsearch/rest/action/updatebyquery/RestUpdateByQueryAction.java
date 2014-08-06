@@ -37,7 +37,7 @@ import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.support.RestActions;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
+import org.elasticsearch.rest.action.support.RestBuilderListener;
 
 import java.io.IOException;
 import java.util.Map;
@@ -60,7 +60,7 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
         controller.registerHandler(POST, "/{index}/{type}/_update_by_query", this);
     }
 
-    public void handleRequest(final RestRequest request, final RestChannel channel) {
+    public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
         UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
                 Strings.splitStringByCommaToArray(request.param("index")),
                 Strings.splitStringByCommaToArray(request.param("type"))
@@ -103,82 +103,68 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
             udqRequest.source(sourceBuilder);
         }
 
-        updateByQueryClient.updateByQuery(udqRequest, new ActionListener<UpdateByQueryResponse>() {
+        updateByQueryClient.updateByQuery(udqRequest, new RestBuilderListener<UpdateByQueryResponse>(channel) {
 
-            public void onResponse(UpdateByQueryResponse response) {
-                try {
-                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
+            public RestResponse buildResponse(UpdateByQueryResponse response, XContentBuilder builder) throws Exception {
+                builder.startObject();
+                builder.field(Fields.OK, !response.hasFailures());
+                builder.field(Fields.TOOK, response.tookInMillis());
+                builder.field(Fields.TOTAL, response.totalHits());
+                builder.field(Fields.UPDATED, response.updated());
 
-                    builder.startObject();
-                    builder.field(Fields.OK, !response.hasFailures());
-                    builder.field(Fields.TOOK, response.tookInMillis());
-                    builder.field(Fields.TOTAL, response.totalHits());
-                    builder.field(Fields.UPDATED, response.updated());
-
-                    if (response.hasFailures()) {
-                        builder.startArray(Fields.ERRORS);
-                        for (String failure : response.mainFailures()) {
-                            builder.field(Fields.ERROR, failure);
-                        }
-                        builder.endArray();
+                if (response.hasFailures()) {
+                    builder.startArray(Fields.ERRORS);
+                    for (String failure : response.mainFailures()) {
+                        builder.field(Fields.ERROR, failure);
                     }
+                    builder.endArray();
+                }
 
-                    if (response.indexResponses().length != 0) {
-                        builder.startArray(Fields.INDICES);
-                        for (IndexUpdateByQueryResponse indexResponse : response.indexResponses()) {
-                            builder.startObject();
-                            builder.field(indexResponse.index());
-                            builder.startObject();
-                            for (Map.Entry<Integer, BulkItemResponse[]> shard : indexResponse.responsesByShard().entrySet()) {
-                                builder.startObject(shard.getKey().toString());
-                                if (indexResponse.failuresByShard().containsKey(shard.getKey())) {
-                                    builder.field(Fields.ERROR, indexResponse.failuresByShard().get(shard.getKey()));
+                if (response.indexResponses().length != 0) {
+                    builder.startArray(Fields.INDICES);
+                    for (IndexUpdateByQueryResponse indexResponse : response.indexResponses()) {
+                        builder.startObject();
+                        builder.field(indexResponse.index());
+                        builder.startObject();
+                        for (Map.Entry<Integer, BulkItemResponse[]> shard : indexResponse.responsesByShard().entrySet()) {
+                            builder.startObject(shard.getKey().toString());
+                            if (indexResponse.failuresByShard().containsKey(shard.getKey())) {
+                                builder.field(Fields.ERROR, indexResponse.failuresByShard().get(shard.getKey()));
+                            }
+                            builder.startArray(Fields.ITEMS);
+                            for (BulkItemResponse itemResponse : shard.getValue()) {
+                                builder.startObject();
+                                builder.startObject(itemResponse.getOpType());
+                                builder.field(Fields._INDEX, itemResponse.getIndex());
+                                builder.field(Fields._TYPE, itemResponse.getType());
+                                builder.field(Fields._ID, itemResponse.getId());
+                                long version = itemResponse.getVersion();
+                                if (version != -1) {
+                                    builder.field(Fields._VERSION, itemResponse.getVersion());
                                 }
-                                builder.startArray(Fields.ITEMS);
-                                for (BulkItemResponse itemResponse : shard.getValue()) {
-                                    builder.startObject();
-                                    builder.startObject(itemResponse.getOpType());
-                                    builder.field(Fields._INDEX, itemResponse.getIndex());
-                                    builder.field(Fields._TYPE, itemResponse.getType());
-                                    builder.field(Fields._ID, itemResponse.getId());
-                                    long version = itemResponse.getVersion();
-                                    if (version != -1) {
-                                        builder.field(Fields._VERSION, itemResponse.getVersion());
-                                    }
-                                    if (itemResponse.isFailed()) {
-                                        builder.field(Fields.ERROR, itemResponse.getFailure().getMessage());
-                                    } else {
-                                        builder.field(Fields.OK, true);
-                                    }
-                                    builder.endObject();
-                                    builder.endObject();
+                                if (itemResponse.isFailed()) {
+                                    builder.field(Fields.ERROR, itemResponse.getFailure().getMessage());
+                                } else {
+                                    builder.field(Fields.OK, true);
                                 }
-                                builder.endArray();
+                                builder.endObject();
                                 builder.endObject();
                             }
-                            for (Map.Entry<Integer, String> shard : indexResponse.failuresByShard().entrySet()) {
-                                builder.startObject(shard.getKey().toString());
-                                builder.field(Fields.ERROR, shard.getValue());
-                                builder.endObject();
-                            }
-                            builder.endObject();
+                            builder.endArray();
                             builder.endObject();
                         }
-                        builder.endArray();
+                        for (Map.Entry<Integer, String> shard : indexResponse.failuresByShard().entrySet()) {
+                            builder.startObject(shard.getKey().toString());
+                            builder.field(Fields.ERROR, shard.getValue());
+                            builder.endObject();
+                        }
+                        builder.endObject();
+                        builder.endObject();
                     }
-                    builder.endObject();
-                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
-                } catch (Exception e) {
-                    onFailure(e);
+                    builder.endArray();
                 }
-            }
-
-            public void onFailure(Throwable e) {
-                try {
-                    channel.sendResponse(new XContentThrowableRestResponse(request, e));
-                } catch (IOException e1) {
-                    logger.error("Failed to send failure response", e1);
-                }
+                builder.endObject();
+                return new BytesRestResponse(RestStatus.OK, builder);
             }
         });
     }
