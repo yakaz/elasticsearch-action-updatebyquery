@@ -127,7 +127,6 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         IndexShard indexShard = indexService.shardSafe(request.shardId());
         ShardSearchRequest shardSearchRequest = new ShardSearchRequest();
         shardSearchRequest.types(request.types());
-        System.out.println(request.filteringAliases());
         shardSearchRequest.filteringAliases(request.filteringAliases());
         SearchContext searchContext = new DefaultSearchContext(
                 0,

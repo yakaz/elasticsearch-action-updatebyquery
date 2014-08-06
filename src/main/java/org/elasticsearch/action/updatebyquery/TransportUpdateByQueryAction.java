@@ -177,7 +177,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
 
     protected void doExecuteIndexRequest(UpdateByQueryRequest request, MetaData metaData, String concreteIndex,
                                          @Nullable Map<String, Set<String>> routingMap, ActionListener<IndexUpdateByQueryResponse> listener) {
-        System.out.println(request.indices());
+
         String[] filteringAliases = metaData.filteringAliases(concreteIndex, request.indices());
         Set<String> routing = null;
         if (routingMap != null) {
