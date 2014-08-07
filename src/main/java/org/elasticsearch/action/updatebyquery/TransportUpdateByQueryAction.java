@@ -103,6 +103,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
         private final AtomicReferenceArray<IndexUpdateByQueryResponse> successFullIndexResponses;
         private final AtomicReferenceArray<Throwable> failedIndexResponses;
         private final AtomicInteger indexCounter;
+        private final AtomicInteger completionCounter;
 
         private MultipleIndexUpdateByQueryActionListener(long startTime, ActionListener<UpdateByQueryResponse> listener, int expectedNumberOfResponses) {
             this.startTime = startTime;
@@ -111,19 +112,19 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
             failedIndexResponses = new AtomicReferenceArray<Throwable>(expectedNumberOfResponses);
             this.expectedNumberOfResponses = expectedNumberOfResponses;
             indexCounter = new AtomicInteger();
+            completionCounter = new AtomicInteger(expectedNumberOfResponses);
         }
 
         public void onResponse(IndexUpdateByQueryResponse indexUpdateByQueryResponse) {
             successFullIndexResponses.set(indexCounter.getAndIncrement(), indexUpdateByQueryResponse);
-            if (indexCounter.get() == expectedNumberOfResponses) {
+            if (completionCounter.decrementAndGet() == 0) {
                 finishHim();
-
             }
         }
 
         public void onFailure(Throwable e) {
             failedIndexResponses.set(indexCounter.getAndIncrement(), e);
-            if (indexCounter.get() == expectedNumberOfResponses) {
+            if (completionCounter.decrementAndGet() == 0) {
                 finishHim();
             }
         }
@@ -355,6 +356,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
             final AtomicReferenceArray<ShardUpdateByQueryResponse> shardResponses;
 
             final AtomicInteger indexCounter;
+            final AtomicInteger completionCounter;
 
             final ActionListener<IndexUpdateByQueryResponse> finalListener;
 
@@ -364,12 +366,13 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
                 shardResponses = new AtomicReferenceArray<ShardUpdateByQueryResponse>(numberOfPrimaryShards);
                 numberOfExpectedShardResponses = numberOfPrimaryShards;
                 indexCounter = new AtomicInteger();
+                completionCounter = new AtomicInteger(numberOfExpectedShardResponses);
                 this.finalListener = finalListener;
             }
 
             void handleResponse(ShardUpdateByQueryResponse response) {
                 shardResponses.set(indexCounter.getAndIncrement(), response);
-                if (indexCounter.get() == numberOfExpectedShardResponses) {
+                if (completionCounter.decrementAndGet() == 0) {
                     finalizeAction();
                 }
             }
@@ -378,7 +381,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
                 logger.error("[{}][{}] error while executing update by query shard request", e, request.index(), shard.id());
                 String failure = ExceptionsHelper.detailedMessage(e);
                 shardResponses.set(indexCounter.getAndIncrement(), new ShardUpdateByQueryResponse(shard.id(), failure));
-                if (indexCounter.get() == numberOfExpectedShardResponses) {
+                if (completionCounter.decrementAndGet() == 0) {
                     finalizeAction();
                 }
             }
