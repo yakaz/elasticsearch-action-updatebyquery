@@ -248,7 +248,12 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void testUpdateByQuery_usingAliases() {
-        client().admin().indices().prepareCreate("test").execute().actionGet();
+        client().admin().indices().prepareCreate("test").setSettings(
+                ImmutableSettings.builder()
+                        .put(indexSettings())
+                        .put("number_of_shards", Math.max(2, numberOfShards()))
+                        .build()
+        ).execute().actionGet();
         client().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
 
         client().admin().indices().prepareAliases().addAliasAction(
