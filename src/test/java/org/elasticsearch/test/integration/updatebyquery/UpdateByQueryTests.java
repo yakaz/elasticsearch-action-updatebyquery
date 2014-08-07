@@ -164,27 +164,30 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void testUpdateByQuery_multipleIndices() throws Exception {
-        createIndex("test1");
-        createIndex("test2");
+        final int numIndices = 10;
+        final long docsPerIndex = 10;
+        final long numDocs = numIndices * docsPerIndex;
+
+        // Create all indices beforehand
+        for (int i = 0; i < numIndices; i++) {
+            createIndex("test" + i);
+            if (i % 5 == 0) {
+                client().admin().indices().prepareFlush("test" + i).execute().actionGet();
+            }
+        }
         ClusterHealthResponse clusterHealth = client().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
         assertThat(clusterHealth.isTimedOut(), equalTo(false));
         assertThat(clusterHealth.getStatus(), equalTo(ClusterHealthStatus.GREEN));
 
-        final long numDocs = 100;
-        final long docsPerIndex = 10;
-        String current = "test0";
-        int id = 1;
-        for (int i = 0; i < numDocs; i++) {
-            if (i % docsPerIndex == 0) {
-                current = "test" + (i / docsPerIndex);
-                id = 1;
-            }
-            client().prepareIndex(current, "type1", Integer.toString(id++)).setSource("field1", 1).execute().actionGet();
-            if (i % 5 == 0) {
-                client().admin().indices().prepareFlush(current).execute().actionGet();
+        // Index docs
+        for (int i = 0; i < numIndices; i++) {
+            String current = "test" + i;
+            for (int id = 0; id < docsPerIndex; ++id) {
+                client().prepareIndex(current, "type1", Integer.toString(id)).setSource("field1", 1).execute().actionGet();
             }
         }
         // Add one doc with a different type.
+        client().prepareIndex("test0", "type2", "-1").setSource("field1", 1).execute().actionGet();
         client().admin().indices().prepareRefresh("*").execute().actionGet();
 
         CountResponse countResponse = client().prepareCount("*")
@@ -206,12 +209,12 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
         assertThat(response, notNullValue());
         assertThat(response.totalHits(), equalTo(numDocs));
         assertThat(response.updated(), equalTo(numDocs));
-        assertThat(response.indexResponses().length, equalTo(10));
+        assertThat(response.indexResponses().length, equalTo(numIndices));
         Arrays.sort(response.indexResponses(), new Comparator<IndexUpdateByQueryResponse>() {
 
             public int compare(IndexUpdateByQueryResponse res1, IndexUpdateByQueryResponse res2) {
-                int index1 = res1.index().charAt(res1.index().length() - 1);
-                int index2 = res2.index().charAt(res2.index().length() - 1);
+                int index1 = Integer.parseInt(res1.index().substring(4));
+                int index2 = Integer.parseInt(res2.index().substring(4));
                 return index1 - index2;
             }
 
