@@ -19,7 +19,8 @@
 
 package org.elasticsearch.rest.action.updatebyquery;
 
-import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.rest.action.support.RestBuilderListener;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.support.replication.ReplicationType;
@@ -28,22 +29,14 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentBuilderString;
-import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.*;
 import org.elasticsearch.rest.*;
-import org.elasticsearch.rest.action.support.RestActions;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestStatus.OK;
 
 /**
  * Rest handler for update by query requests.
@@ -61,124 +54,104 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
     }
 
     public void handleRequest(final RestRequest request, final RestChannel channel) {
-        UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
+        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(
                 Strings.splitStringByCommaToArray(request.param("index")),
                 Strings.splitStringByCommaToArray(request.param("type"))
         );
-        udqRequest.listenerThreaded(false);
+        updateByQueryRequest.listenerThreaded(false);
+        if (request.hasContent()) {
+            updateByQueryRequest.source(request.content(), request.contentUnsafe());
+        } else {
+            String source = request.param("source");
+            if (source != null) {
+                UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
+                sourceBuilder.script(source);
+                updateByQueryRequest.source(sourceBuilder);
+            } else { //not sure if this is necessary
+            }
+        }
+        updateByQueryRequest.timeout(request.paramAsTime("timeout", ShardUpdateByQueryRequest.DEFAULT_TIMEOUT));
+
+        updateByQueryRequest.routing(request.param("routing"));
         String replicationType = request.param("replication");
         if (replicationType != null) {
-            udqRequest.replicationType(ReplicationType.fromString(replicationType));
+            updateByQueryRequest.replicationType(ReplicationType.fromString(replicationType));
         }
         String consistencyLevel = request.param("consistency");
         if (consistencyLevel != null) {
-            udqRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
+            updateByQueryRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
         }
-        String responseType = request.param("response");
-        if (responseType != null) {
-            udqRequest.bulkResponseOptions(BulkResponseOption.fromString(responseType));
-        }
-        udqRequest.routing(request.param("routing"));
-        String timeout = request.param("timeout");
-        if (timeout != null) {
-            udqRequest.timeout(TimeValue.parseTimeValue(timeout, null));
-        }
+        updateByQueryRequest.indicesOptions(IndicesOptions.fromRequest(request, updateByQueryRequest.indicesOptions()));
 
-        // see if we have it in the body
-        if (request.hasContent()) {
-            udqRequest.source(request.content(), request.contentUnsafe());
-        } else if (request.hasParam("source")) {
-            udqRequest.source(new BytesArray(request.param("source")), false);
-        } else if (request.hasParam("q")) {
-            UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
-            sourceBuilder.script(request.param("script"));
-            sourceBuilder.scriptLang(request.param("lang"));
-            for (Map.Entry<String, String> entry : request.params().entrySet()) {
-                if (entry.getKey().startsWith("sp_")) {
-                    sourceBuilder.addScriptParam(entry.getKey().substring(3), entry.getValue());
-                }
-            }
+        updateByQueryClient.updateByQuery(updateByQueryRequest, new RestBuilderListener<UpdateByQueryResponse>(channel) {
+            @Override
+            public RestResponse buildResponse(UpdateByQueryResponse response, XContentBuilder builder) throws Exception {
 
-            sourceBuilder.query(RestActions.parseQuerySource(request).buildAsBytes(XContentType.JSON));
-            udqRequest.source(sourceBuilder);
-        }
+                builder = channel.newBuilder();
 
-        updateByQueryClient.updateByQuery(udqRequest, new ActionListener<UpdateByQueryResponse>() {
+                builder.startObject()
+                        .field(Fields.OK, !response.hasFailures())
+                        .field(Fields.TOOK, response.tookInMillis())
+                        .field(Fields.TOTAL, response.totalHits())
+                        .field(Fields.UPDATED, response.updated());
 
-            public void onResponse(UpdateByQueryResponse response) {
-                try {
-                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
-
-                    builder.startObject();
-                    builder.field(Fields.OK, !response.hasFailures());
-                    builder.field(Fields.TOOK, response.tookInMillis());
-                    builder.field(Fields.TOTAL, response.totalHits());
-                    builder.field(Fields.UPDATED, response.updated());
-
-                    if (response.hasFailures()) {
-                        builder.startArray(Fields.ERRORS);
-                        for (String failure : response.mainFailures()) {
-                            builder.field(Fields.ERROR, failure);
-                        }
-                        builder.endArray();
+                if (response.hasFailures()) {
+                    builder.startArray(Fields.ERRORS);
+                    for (String failure : response.mainFailures()) {
+                        builder.field(Fields.ERROR, failure);
                     }
+                    builder.endArray();
+                }
 
-                    if (response.indexResponses().length != 0) {
-                        builder.startArray(Fields.INDICES);
-                        for (IndexUpdateByQueryResponse indexResponse : response.indexResponses()) {
-                            builder.startObject();
-                            builder.field(indexResponse.index());
-                            builder.startObject();
-                            for (Map.Entry<Integer, BulkItemResponse[]> shard : indexResponse.responsesByShard().entrySet()) {
-                                builder.startObject(shard.getKey().toString());
-                                if (indexResponse.failuresByShard().containsKey(shard.getKey())) {
-                                    builder.field(Fields.ERROR, indexResponse.failuresByShard().get(shard.getKey()));
+                if (response.indexResponses().length != 0) {
+                    builder.startArray(Fields.INDICES);
+                    for (IndexUpdateByQueryResponse indexResponse : response.indexResponses()) {
+                        builder.startObject();
+                        builder.field(indexResponse.index());
+                        builder.startObject();
+                        for (Map.Entry<Integer, BulkItemResponse[]> shard : indexResponse.responsesByShard().entrySet()) {
+                            builder.startObject(shard.getKey().toString());
+                            if (indexResponse.failuresByShard().containsKey(shard.getKey())) {
+                                builder.field(Fields.ERROR, indexResponse.failuresByShard().get(shard.getKey()));
+                            }
+                            builder.startArray(Fields.ITEMS);
+                            for (BulkItemResponse itemResponse : shard.getValue()) {
+                                builder.startObject();
+                                builder.startObject(itemResponse.getOpType());
+                                builder.field(Fields._INDEX, itemResponse.getIndex());
+                                builder.field(Fields._TYPE, itemResponse.getType());
+                                builder.field(Fields._ID, itemResponse.getId());
+                                long version = itemResponse.getVersion();
+                                if (version != -1) {
+                                    builder.field(Fields._VERSION, itemResponse.getVersion());
                                 }
-                                builder.startArray(Fields.ITEMS);
-                                for (BulkItemResponse itemResponse : shard.getValue()) {
-                                    builder.startObject();
-                                    builder.startObject(itemResponse.getOpType());
-                                    builder.field(Fields._INDEX, itemResponse.getIndex());
-                                    builder.field(Fields._TYPE, itemResponse.getType());
-                                    builder.field(Fields._ID, itemResponse.getId());
-                                    long version = itemResponse.getVersion();
-                                    if (version != -1) {
-                                        builder.field(Fields._VERSION, itemResponse.getVersion());
-                                    }
-                                    if (itemResponse.isFailed()) {
-                                        builder.field(Fields.ERROR, itemResponse.getFailure().getMessage());
-                                    } else {
-                                        builder.field(Fields.OK, true);
-                                    }
-                                    builder.endObject();
-                                    builder.endObject();
+                                if (itemResponse.isFailed()) {
+                                    builder.field(Fields.ERROR, itemResponse.getFailure().getMessage());
+                                } else {
+                                    builder.field(Fields.OK, true);
                                 }
-                                builder.endArray();
+                                builder.endObject();
                                 builder.endObject();
                             }
-                            for (Map.Entry<Integer, String> shard : indexResponse.failuresByShard().entrySet()) {
-                                builder.startObject(shard.getKey().toString());
-                                builder.field(Fields.ERROR, shard.getValue());
-                                builder.endObject();
-                            }
-                            builder.endObject();
+                            builder.endArray();
                             builder.endObject();
                         }
-                        builder.endArray();
+                        for (Map.Entry<Integer, String> shard : indexResponse.failuresByShard().entrySet()) {
+                            builder.startObject(shard.getKey().toString());
+                            builder.field(Fields.ERROR, shard.getValue());
+                            builder.endObject();
+                        }
+                        builder.endObject();
+                        builder.endObject();
                     }
-                    builder.endObject();
-                    channel.sendResponse(new XContentRestResponse(request, OK, builder));
-                } catch (Exception e) {
-                    onFailure(e);
+                    builder.endArray();
                 }
-            }
-
-            public void onFailure(Throwable e) {
-                try {
-                    channel.sendResponse(new XContentThrowableRestResponse(request, e));
-                } catch (IOException e1) {
-                    logger.error("Failed to send failure response", e1);
+                builder.endObject();
+                RestStatus status = RestStatus.OK;
+                if (!response.hasFailures()) {
+                    status = RestStatus.CREATED;
                 }
+                return new BytesRestResponse(status, builder);
             }
         });
     }
