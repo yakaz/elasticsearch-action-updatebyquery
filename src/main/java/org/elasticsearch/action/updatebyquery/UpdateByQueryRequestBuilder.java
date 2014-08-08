@@ -24,7 +24,6 @@ import org.elasticsearch.action.support.replication.IndicesReplicationOperationR
 import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
-import org.elasticsearch.client.internal.InternalClient;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.index.query.QueryBuilder;
 
@@ -39,7 +38,7 @@ public class UpdateByQueryRequestBuilder extends IndicesReplicationOperationRequ
     private UpdateByQuerySourceBuilder sourceBuilder;
 
     public UpdateByQueryRequestBuilder(Client client) {
-        super((InternalClient)client, new UpdateByQueryRequest());
+        super(client, new UpdateByQueryRequest());
         updateByQueryClientWrapper = new UpdateByQueryClientWrapper(client);
     }
 

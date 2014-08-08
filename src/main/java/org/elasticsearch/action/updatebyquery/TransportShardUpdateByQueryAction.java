@@ -19,16 +19,15 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.FixedBitSet;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.support.TransportAction;
-import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
@@ -90,7 +89,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                              ScriptService scriptService,
                                              PageCacheRecycler pageCacheRecycler,
                                              BigArrays bigArrays) {
-        super(settings, threadPool);
+        super(settings, ACTION_NAME, threadPool);
         this.bulkAction = bulkAction;
         this.cacheRecycler = cacheRecycler;
         this.indicesService = indicesService;
@@ -149,7 +148,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             if (docsToUpdateCount == 0) {
                 ShardUpdateByQueryResponse response = new ShardUpdateByQueryResponse(request.shardId());
                 listener.onResponse(response);
-                searchContext.clearAndRelease();
+                searchContext.close();
                 return;
             }
             BatchedShardUpdateByQueryExecutor bulkExecutor = new BatchedShardUpdateByQueryExecutor(
@@ -159,7 +158,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         } catch (Throwable t) {
             // If we end up here then BatchedShardUpdateByQueryExecutor#finalizeBulkActions isn't invoked
             // so we need to release the search context.
-            searchContext.clearAndRelease();
+            searchContext.close();
             listener.onFailure(t);
         } finally {
             SearchContext.removeCurrent();
@@ -305,7 +304,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         private void finalizeBulkActions(Throwable e) {
-            updateByQueryContext.searchContext.clearAndRelease();
+            updateByQueryContext.searchContext.close();
             BulkItemResponse[] bulkResponses = receivedBulkItemResponses.toArray(new BulkItemResponse[receivedBulkItemResponses.size()]);
             receivedBulkItemResponses.clear();
             ShardUpdateByQueryResponse finalResponse = new ShardUpdateByQueryResponse(

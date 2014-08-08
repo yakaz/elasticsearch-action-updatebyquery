@@ -23,6 +23,8 @@ import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.IOException;
 
@@ -31,7 +33,7 @@ import java.io.IOException;
  * Each bulk item response holds the result of an individual update.
  */
 // TODO: implements Iterable for index responses
-public class UpdateByQueryResponse extends ActionResponse {
+public class UpdateByQueryResponse extends ActionResponse implements ToXContent {
 
     private long tookInMillis;
     private long totalHits;
@@ -138,5 +140,10 @@ public class UpdateByQueryResponse extends ActionResponse {
             response.writeTo(out);
         }
         out.writeStringArray(mainFailures);
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        return builder;
     }
 }
