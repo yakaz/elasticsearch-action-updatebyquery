@@ -58,7 +58,8 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
         controller.registerHandler(POST, "/{index}/{type}/_update_by_query", this);
     }
 
-    public void handleRequest(final RestRequest request, final RestChannel channel) {
+    @Override
+    public void handleRequest(final RestRequest request, final RestChannel channel, Client client) {
         UpdateByQueryRequest udqRequest = new UpdateByQueryRequest(
                 Strings.splitStringByCommaToArray(request.param("index")),
                 Strings.splitStringByCommaToArray(request.param("type"))

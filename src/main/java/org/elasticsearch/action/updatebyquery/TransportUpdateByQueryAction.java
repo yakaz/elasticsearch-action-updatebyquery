@@ -71,7 +71,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
                                         TransportService transportService,
                                         ClusterService clusterService,
                                         TransportShardUpdateByQueryAction transportShardUpdateByQueryAction) {
-        super(settings, threadPool);
+        super(settings, UpdateByQueryAction.NAME, threadPool);
         this.transportService = transportService;
         this.clusterService = clusterService;
         this.transportShardUpdateByQueryAction = transportShardUpdateByQueryAction;

@@ -90,7 +90,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                                              ScriptService scriptService,
                                              PageCacheRecycler pageCacheRecycler,
                                              BigArrays bigArrays) {
-        super(settings, threadPool);
+        super(settings, ACTION_NAME, threadPool);
         this.bulkAction = bulkAction;
         this.cacheRecycler = cacheRecycler;
         this.indicesService = indicesService;
