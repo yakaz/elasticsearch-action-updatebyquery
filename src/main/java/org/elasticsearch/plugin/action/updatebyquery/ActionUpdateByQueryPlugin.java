@@ -32,7 +32,7 @@ import org.elasticsearch.rest.action.updatebyquery.RestUpdateByQueryAction;
 /**
  * @author ofavre
  */
-public class AnalysisUpdateByQueryPlugin extends AbstractPlugin {
+public class ActionUpdateByQueryPlugin extends AbstractPlugin {
 
     @Override public String name() {
         return "action-updatebyquery";
