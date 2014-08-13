@@ -46,7 +46,7 @@
 
     <properties>
         <lucene.version>4.8.1</lucene.version>
-        <elasticsearch.version>1.2.0</elasticsearch.version>
+        <elasticsearch.version>1.2.3</elasticsearch.version>
         <tests.jvms>1</tests.jvms>
         <tests.shuffle>true</tests.shuffle>
         <tests.output>onerror</tests.output>

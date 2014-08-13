@@ -32,8 +32,11 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.plugins.PluginsService;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
+import org.elasticsearch.test.ElasticsearchIntegrationTest.Scope;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -47,6 +50,10 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertHitCount;
 import static org.hamcrest.Matchers.*;
 
+@ClusterScope(
+        scope = Scope.SUITE,      // needed to control node settings, in order to add "plugins.load_classpath_plugins=true"
+        transportClientRatio = 0  // as we can't control the transport node settings to add "plugins.load_classpath_plugins=true", forbid TransportClients
+)
 public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
 
     public static UpdateByQueryClientWrapper updateByQueryClient() {
@@ -76,6 +83,7 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
         return ImmutableSettings.settingsBuilder()
+                .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
                 .put("action.updatebyquery.bulk_size", 5)
                 .put(super.nodeSettings(nodeOrdinal))
                 .build();
