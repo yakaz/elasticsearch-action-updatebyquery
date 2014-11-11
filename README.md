@@ -77,8 +77,6 @@ The update by query api translates the documents that match into bulk index / de
 After the bulk limit has been reached, the bulk requests created thus far will be executed.
 After the bulk requests have been executed the next batch of requests will be prepared and executed.
 This behavior continues until all documents that matched the query have been processed.
-The bulk size can be configured with the `action.updatebyquery.bulk_size` option in the elasticsearch configuration.
-For example: `action.updatebyquery.bulk_size=2500`
 
 Example usage
 -------------
@@ -130,11 +128,13 @@ By default no bulk item responses are included in the response.
 If there are bulk item responses included in the response, the bulk response items are grouped by index and shard.
 This can be controlled by the `response` option.
 
-Options:
---------
+Options
+-------
 
-Additional general options in request body:
+### Request body options:
 
+* `query`: The query that the documents must match to be updated.
+* `script`: The script name or source.
 * `lang`: The script language.
 * `params`: The script parameters.
 
@@ -149,12 +149,21 @@ Additional general options in request body:
 * `routing`: Sets the routing that will be used to route the document to the relevant shard.
 * `timeout`: Timeout waiting for a shard to become available.
 
+### Configuration options:
+
+* `action.updatebyquery.bulk_size`: The number of documents per update bulk. Defaults to `1000`.
+* `threadpool.bulk.queue_size`: This plugins files bulk requests to perform the actual updates.
+   You may decide to increase this value over its default of 50 if you are experiencing the following errors:
+   `EsRejectedExecutionException[rejected execution (queue capacity 50) on org.elasticsearch.action.updatebyquery.TransportShardUpdateByQueryAction$1]`
+
 Context variables
 -----------------
 
 NOTE: v2.0.0 of this plugin dropped the support of additional context variables in favor of a unified code path with the Update API.
 Pull request [elasticsearch/elasticsearch#5724][es#5724] aims at restoring them (except `_uid`).
 As such, the context variables available through the update by query feature are the same as those available in the Update API scripts.
+
+### Input variables
 
 Just like in the Update API, the script has access to the following variables (as of Elasticsearch 1.1.0):
 
