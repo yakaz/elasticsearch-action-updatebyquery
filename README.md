@@ -83,6 +83,9 @@ For example: `action.updatebyquery.bulk_size=2500`
 Example usage
 -------------
 
+**Note:** The following example uses dynamic scripts, disabled by default since ElasticSearch 1.2.0.
+    To enable them, add `script.disable_dynamic: false` to your elasticsearch configuration.
+
 Index an example document:
 
 ```sh
