@@ -23,10 +23,7 @@ import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.replication.IndexReplicationOperationRequest;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.io.stream.StreamInput;
-import org.elasticsearch.common.io.stream.StreamOutput;
 
-import java.io.IOException;
 import java.util.Set;
 
 import static org.elasticsearch.action.ValidateActions.addValidationError;
@@ -34,7 +31,7 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
 /**
  * Represents an update by query request targeted for a specific index.
  */
-public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest {
+public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<IndexUpdateByQueryRequest> {
 
     private String[] types = new String[0];
     private BulkResponseOption bulkResponseOption;
@@ -44,15 +41,9 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest 
     private BytesReference source;
     private boolean sourceUnsafe;
 
-    IndexUpdateByQueryRequest() {
-    }
-
     IndexUpdateByQueryRequest(UpdateByQueryRequest request, String index, String[] filteringAliases, Set<String> routing) {
-        this.replicationType = request.replicationType();
-        this.consistencyLevel = request.consistencyLevel();
-        this.timeout = request.timeout();
+        super(index, request.timeout(), request.replicationType(), request.consistencyLevel(), request.indices(), request.indicesOptions(), request);
         this.listenerThreaded(request.listenerThreaded());
-        this.index = index;
         this.types = request.types();
         this.bulkResponseOption = request.bulkResponseOptions();
         this.source = request.source();
@@ -102,27 +93,6 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest 
             validationException = addValidationError("Source is missing", validationException);
         }
         return validationException;
-    }
-
-    @Override
-    public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        types = in.readStringArray();
-        bulkResponseOption = BulkResponseOption.fromId(in.readByte());
-        filteringAliases = in.readStringArray();
-        routing = Sets.newHashSet(in.readStringArray());
-        source = in.readBytesReference();
-        sourceUnsafe = false;
-    }
-
-    @Override
-    public void writeTo(StreamOutput out) throws IOException {
-        super.writeTo(out);
-        out.writeStringArray(types);
-        out.writeByte(bulkResponseOption.id());
-        out.writeStringArray(filteringAliases);
-        out.writeStringArray(routing.toArray(new String[routing.size()]));
-        out.writeBytesReference(source);
     }
 
 }

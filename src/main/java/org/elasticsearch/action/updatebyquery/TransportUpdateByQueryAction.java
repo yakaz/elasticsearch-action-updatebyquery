@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
@@ -68,10 +69,11 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
     @Inject
     public TransportUpdateByQueryAction(Settings settings,
                                         ThreadPool threadPool,
+                                        ActionFilters actionFilters,
                                         TransportService transportService,
                                         ClusterService clusterService,
                                         TransportShardUpdateByQueryAction transportShardUpdateByQueryAction) {
-        super(settings, UpdateByQueryAction.NAME, threadPool);
+        super(settings, UpdateByQueryAction.NAME, threadPool, actionFilters);
         this.transportService = transportService;
         this.clusterService = clusterService;
         this.transportShardUpdateByQueryAction = transportShardUpdateByQueryAction;

@@ -52,7 +52,7 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
     @Inject
     public RestUpdateByQueryAction(Settings settings, Client client, RestController controller) {
-        super(settings, client);
+        super(settings, controller, client);
         updateByQueryClient = new UpdateByQueryClientWrapper(client);
         controller.registerHandler(POST, "/{index}/_update_by_query", this);
         controller.registerHandler(POST, "/{index}/{type}/_update_by_query", this);
