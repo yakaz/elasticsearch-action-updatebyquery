@@ -47,6 +47,7 @@
     <properties>
         <lucene.version>4.10.1</lucene.version>
         <elasticsearch.version>1.4.0.Beta1</elasticsearch.version>
+        <groovy.version>2.3.2</groovy.version>
         <tests.jvms>1</tests.jvms>
         <tests.shuffle>true</tests.shuffle>
         <tests.output>onerror</tests.output>
@@ -63,10 +64,19 @@
         </dependency>
 
         <dependency>
-        <groupId>org.elasticsearch</groupId>
+            <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch</artifactId>
             <version>${elasticsearch.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <!-- This is an optional dependency of ES and is not transitively loaded. -->
+            <!-- Somehow necessary to help ES load the internal lang-groovy plugin. -->
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>${groovy.version}</version>
             <scope>test</scope>
         </dependency>
 

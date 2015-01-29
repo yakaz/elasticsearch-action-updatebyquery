@@ -30,6 +30,8 @@ import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.plugins.PluginsService;
@@ -39,6 +41,7 @@ import org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
 import org.elasticsearch.test.ElasticsearchIntegrationTest.Scope;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -85,6 +88,7 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
         return ImmutableSettings.settingsBuilder()
                 .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
                 .put("action.updatebyquery.bulk_size", 5)
+                .put("script.disable_dynamic", false)
                 .put(super.nodeSettings(nodeOrdinal))
                 .build();
     }
@@ -255,12 +259,21 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
-    public void testUpdateByQuery_usingAliases() {
+    public void testUpdateByQuery_usingAliases() throws IOException {
         client().admin().indices().prepareCreate("test").setSettings(
                 ImmutableSettings.builder()
                         .put(indexSettings())
                         .put("number_of_shards", Math.max(2, numberOfShards()))
                         .build()
+        ).addMapping("type1", XContentFactory.jsonBuilder()
+                        // Define the field prior to creating a filtered alias on it
+                        .startObject()
+                        .startObject("properties")
+                        .startObject("field")
+                        .field("type", "string")
+                        .endObject()
+                        .endObject()
+                        .endObject()
         ).execute().actionGet();
         client().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
 
