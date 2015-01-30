@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.updatebyquery;
 
+import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.common.collect.Maps;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.DocIdSetIterator;
@@ -84,13 +85,14 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     public TransportShardUpdateByQueryAction(Settings settings,
                                              ThreadPool threadPool,
                                              TransportShardBulkAction bulkAction,
+                                             ActionFilters actionFilters,
                                              TransportService transportService,
                                              CacheRecycler cacheRecycler, IndicesService indicesService,
                                              ClusterService clusterService,
                                              ScriptService scriptService,
                                              PageCacheRecycler pageCacheRecycler,
                                              BigArrays bigArrays) {
-        super(settings, ACTION_NAME, threadPool);
+        super(settings, ACTION_NAME, threadPool, actionFilters);
         this.bulkAction = bulkAction;
         this.cacheRecycler = cacheRecycler;
         this.indicesService = indicesService;
@@ -132,7 +134,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 0,
                 shardSearchRequest,
                 null, indexShard.acquireSearcher("update_by_query"), indexService, indexShard,
-                scriptService, cacheRecycler, pageCacheRecycler, bigArrays
+                scriptService, cacheRecycler, pageCacheRecycler, bigArrays, threadPool.estimatedTimeInMillisCounter()
         );
         SearchContext.setCurrent(searchContext);
         try {
@@ -295,8 +297,9 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                         updateByQueryContext.bulkItemRequestsBulkList.toArray(new BulkItemRequest[updateByQueryContext.bulkItemRequestsBulkList.size()]);
                 // We clear the list, since the array is already created
                 updateByQueryContext.bulkItemRequestsBulkList.clear();
+                BulkRequest fakeBulkRequest = new BulkRequest();
                 final BulkShardRequest bulkShardRequest = new PublicBulkShardRequest(
-                        request.index(), request.shardId(), false, bulkItemRequests
+                        fakeBulkRequest, request.index(), request.shardId(), false, bulkItemRequests
                 );
                 // The batches are already threaded... No need for new thread
                 bulkShardRequest.operationThreaded(false);

@@ -7,8 +7,8 @@ public class PublicBulkShardRequest extends BulkShardRequest {
     public PublicBulkShardRequest() {
     }
 
-    public PublicBulkShardRequest(String index, int shardId, boolean refresh, BulkItemRequest[] items) {
-        super(index, shardId, refresh, items);
+    public PublicBulkShardRequest(BulkRequest bulkRequest, String index, int shardId, boolean refresh, BulkItemRequest[] items) {
+        super(bulkRequest, index, shardId, refresh, items);
     }
 
 }
