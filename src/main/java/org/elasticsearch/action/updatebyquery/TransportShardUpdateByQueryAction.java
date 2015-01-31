@@ -52,6 +52,7 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.internal.DefaultSearchContext;
 import org.elasticsearch.search.internal.SearchContext;
+import org.elasticsearch.search.internal.ShardSearchLocalRequest;
 import org.elasticsearch.search.internal.ShardSearchRequest;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.BaseTransportRequestHandler;
@@ -127,9 +128,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private void doExecuteInternal(ShardUpdateByQueryRequest request, ActionListener<ShardUpdateByQueryResponse> listener) {
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(request.shardId());
-        ShardSearchRequest shardSearchRequest = new ShardSearchRequest();
-        shardSearchRequest.types(request.types());
-        shardSearchRequest.filteringAliases(request.filteringAliases());
+        ShardSearchRequest shardSearchRequest = new ShardSearchLocalRequest(request.types(), request.nowInMillis(), request.filteringAliases());
         SearchContext searchContext = new DefaultSearchContext(
                 0,
                 shardSearchRequest,

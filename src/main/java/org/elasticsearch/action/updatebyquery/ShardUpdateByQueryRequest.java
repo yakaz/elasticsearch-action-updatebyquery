@@ -42,6 +42,7 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
     private BytesReference source;
     private boolean sourceUnsafe;
 
+    private long nowInMillis;
     private int shardId = -1;
     private String targetNodeId;
 
@@ -59,6 +60,7 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
         sourceUnsafe = request.sourceUnsafe();
         bulkResponseOption = request.bulkResponseOptions();
         filteringAliases = request.filteringAliases();
+        this.nowInMillis = request.nowInMillis();
         this.shardId = shardId;
         this.targetNodeId = targetNodeId;
     }
@@ -77,6 +79,10 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
 
     public String[] filteringAliases() {
         return filteringAliases;
+    }
+
+    public long nowInMillis() {
+        return nowInMillis;
     }
 
     public int shardId() {

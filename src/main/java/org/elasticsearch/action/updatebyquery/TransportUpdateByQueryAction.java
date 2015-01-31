@@ -81,15 +81,15 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
     }
 
     protected void doExecute(UpdateByQueryRequest request, ActionListener<UpdateByQueryResponse> listener) {
-        long startTime = System.currentTimeMillis();
+        request.nowInMillis = System.currentTimeMillis();
         MetaData metaData = clusterService.state().metaData();
         String[] concreteIndices = metaData.concreteIndices(IndicesOptions.lenientExpandOpen(), request.indices());
         Map<String, Set<String>> routingMap = metaData.resolveSearchRouting(request.routing(), request.indices());
         if (concreteIndices.length == 1) {
-            doExecuteIndexRequest(request, metaData, concreteIndices[0], routingMap, new SingleIndexUpdateByQueryActionListener(startTime, listener));
+            doExecuteIndexRequest(request, metaData, concreteIndices[0], routingMap, new SingleIndexUpdateByQueryActionListener(request.nowInMillis, listener));
         } else {
             MultipleIndexUpdateByQueryActionListener indexActionListener =
-                    new MultipleIndexUpdateByQueryActionListener(startTime, listener, concreteIndices.length);
+                    new MultipleIndexUpdateByQueryActionListener(request.nowInMillis, listener, concreteIndices.length);
             for (String concreteIndex : concreteIndices) {
                 doExecuteIndexRequest(request, metaData, concreteIndex, routingMap, indexActionListener);
             }
@@ -99,7 +99,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
 
     private static class MultipleIndexUpdateByQueryActionListener implements ActionListener<IndexUpdateByQueryResponse> {
 
-        private final long startTime;
+        private final long nowInMillis;
         private final ActionListener<UpdateByQueryResponse> listener;
         private final int expectedNumberOfResponses;
         private final AtomicReferenceArray<IndexUpdateByQueryResponse> successFullIndexResponses;
@@ -107,8 +107,8 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
         private final AtomicInteger indexCounter;
         private final AtomicInteger completionCounter;
 
-        private MultipleIndexUpdateByQueryActionListener(long startTime, ActionListener<UpdateByQueryResponse> listener, int expectedNumberOfResponses) {
-            this.startTime = startTime;
+        private MultipleIndexUpdateByQueryActionListener(long nowInMillis, ActionListener<UpdateByQueryResponse> listener, int expectedNumberOfResponses) {
+            this.nowInMillis = nowInMillis;
             this.listener = listener;
             successFullIndexResponses = new AtomicReferenceArray<IndexUpdateByQueryResponse>(expectedNumberOfResponses);
             failedIndexResponses = new AtomicReferenceArray<Throwable>(expectedNumberOfResponses);
@@ -132,7 +132,7 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
         }
 
         private void finishHim() {
-            long tookInMillis = System.currentTimeMillis() - startTime;
+            long tookInMillis = System.currentTimeMillis() - nowInMillis;
             UpdateByQueryResponse response = new UpdateByQueryResponse(tookInMillis);
             List<IndexUpdateByQueryResponse> indexResponses = Lists.newArrayList();
             List<String> indexFailures = Lists.newArrayList();
@@ -152,22 +152,22 @@ public class TransportUpdateByQueryAction extends TransportAction<UpdateByQueryR
 
     private static class SingleIndexUpdateByQueryActionListener implements ActionListener<IndexUpdateByQueryResponse> {
 
-        private final long startTime;
+        private final long nowInMillis;
         private final ActionListener<UpdateByQueryResponse> listener;
 
-        private SingleIndexUpdateByQueryActionListener(long startTime, ActionListener<UpdateByQueryResponse> listener) {
+        private SingleIndexUpdateByQueryActionListener(long nowInMillis, ActionListener<UpdateByQueryResponse> listener) {
             this.listener = listener;
-            this.startTime = startTime;
+            this.nowInMillis = nowInMillis;
         }
 
         public void onResponse(IndexUpdateByQueryResponse indexUpdateByQueryResponse) {
-            long tookInMillis = System.currentTimeMillis() - startTime;
+            long tookInMillis = System.currentTimeMillis() - nowInMillis;
             UpdateByQueryResponse finalResponse = new UpdateByQueryResponse(tookInMillis, indexUpdateByQueryResponse);
             listener.onResponse(finalResponse);
         }
 
         public void onFailure(Throwable e) {
-            long tookInMillis = System.currentTimeMillis() - startTime;
+            long tookInMillis = System.currentTimeMillis() - nowInMillis;
             UpdateByQueryResponse finalResponse = new UpdateByQueryResponse(tookInMillis);
             finalResponse.mainFailures(new String[]{ExceptionsHelper.detailedMessage(e)});
             listener.onResponse(finalResponse);

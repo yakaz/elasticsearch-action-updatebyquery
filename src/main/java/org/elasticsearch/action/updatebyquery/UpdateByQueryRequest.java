@@ -45,6 +45,8 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest<Upd
     private BytesReference source;
     private boolean sourceUnsafe;
 
+    long nowInMillis;
+
     UpdateByQueryRequest() {
 
     }

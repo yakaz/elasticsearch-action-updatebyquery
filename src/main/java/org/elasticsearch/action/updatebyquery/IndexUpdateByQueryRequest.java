@@ -40,6 +40,7 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
 
     private BytesReference source;
     private boolean sourceUnsafe;
+    private long nowInMillis;
 
     IndexUpdateByQueryRequest(UpdateByQueryRequest request, String index, String[] filteringAliases, Set<String> routing) {
         super(index, request.timeout(), request.replicationType(), request.consistencyLevel(), request.indices(), request.indicesOptions(), request);
@@ -48,6 +49,7 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
         this.bulkResponseOption = request.bulkResponseOptions();
         this.source = request.source();
         this.sourceUnsafe = request.sourceUnsafe();
+        this.nowInMillis = request.nowInMillis;
         if (filteringAliases != null) {
             this.filteringAliases = filteringAliases;
         }
@@ -78,6 +80,10 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
 
     public boolean sourceUnsafe() {
         return sourceUnsafe;
+    }
+
+    public long nowInMillis() {
+        return nowInMillis;
     }
 
     public void beforeLocalFork() {
