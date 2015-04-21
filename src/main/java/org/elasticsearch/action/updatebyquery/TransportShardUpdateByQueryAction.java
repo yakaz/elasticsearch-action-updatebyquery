@@ -170,6 +170,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private UpdateByQueryContext parseRequestSource(IndexService indexService, ShardUpdateByQueryRequest request, SearchContext context) {
         ParsedQuery parsedQuery = null;
         String script = null;
+        String scriptFile = null;
         String scriptLang = null;
         Map<String, Object> params = Maps.newHashMap();
         try {
@@ -187,6 +188,9 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                     } else if ("script".equals(fieldName)) {
                         parser.nextToken();
                         script = parser.text();
+                    } else if ("script_file".equals(fieldName)) {
+                        parser.nextToken();
+                        scriptFile = parser.text();
                     } else if ("lang".equals(fieldName)) {
                         parser.nextToken();
                         scriptLang = parser.text();
@@ -203,11 +207,11 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         if (parsedQuery == null) {
             throw new ElasticsearchException("Query is required");
         }
-        if (script == null) {
-            throw new ElasticsearchException("Script is required");
+        if (script == null && scriptFile == null) {
+            throw new ElasticsearchException("Script or script_file is required");
         }
         context.parsedQuery(parsedQuery);
-        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, scriptLang, params);
+        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, scriptFile, scriptLang, params);
     }
 
 
@@ -330,8 +334,12 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 Uid uid = fieldVisitor.uid();
                 UpdateRequest updateRequest = new UpdateRequest(request.index(), uid.type(), uid.id())
                         .scriptLang(updateByQueryContext.scriptLang)
-                        .scriptParams(updateByQueryContext.scriptParams)
-                        .script(updateByQueryContext.scriptString);
+                        .scriptParams(updateByQueryContext.scriptParams);
+                if (updateByQueryContext.scriptFileString != null) {
+                    updateRequest.script(updateByQueryContext.scriptFileString, ScriptService.ScriptType.FILE);
+                } else {
+                    updateRequest.script(updateByQueryContext.scriptString);
+                }
                 bulkItemRequests.add(new BulkItemRequest(counter, updateRequest));
 
                 if (++counter == batchSize) {
@@ -386,14 +394,17 @@ class UpdateByQueryContext {
     final ClusterState clusterState;
 
     final String scriptString;
+    final String scriptFileString;
     final String scriptLang;
     final Map<String, Object> scriptParams;
 
-    UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString, String scriptLang, Map<String, Object> scriptParams) {
+    UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString,
+                         String scriptFileString, String scriptLang, Map<String, Object> scriptParams) {
         this.searchContext = searchContext;
         this.clusterState = clusterState;
         this.bulkItemRequestsBulkList = new ArrayList<BulkItemRequest>(batchSize);
         this.scriptString = scriptString;
+        this.scriptFileString = scriptFileString;
         this.scriptLang = scriptLang;
         this.scriptParams = scriptParams;
     }

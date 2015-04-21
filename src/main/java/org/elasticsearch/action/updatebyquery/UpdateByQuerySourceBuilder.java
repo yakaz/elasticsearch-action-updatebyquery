@@ -40,6 +40,7 @@ public class UpdateByQuerySourceBuilder implements ToXContent {
     private QueryBuilder queryBuilder;
     private BytesReference queryBinary;
     private String script;
+    private String scriptFile;
     private String scriptLang;
     private Map<String, Object> scriptParams = newHashMap();
 
@@ -55,6 +56,11 @@ public class UpdateByQuerySourceBuilder implements ToXContent {
 
     public UpdateByQuerySourceBuilder script(String script) {
         this.script = script;
+        return this;
+    }
+
+    public UpdateByQuerySourceBuilder scriptFile(String scriptFile) {
+        this.scriptFile = scriptFile;
         return this;
     }
 
@@ -90,6 +96,10 @@ public class UpdateByQuerySourceBuilder implements ToXContent {
 
         if (script != null) {
             builder.field("script", script);
+        }
+
+        if (scriptFile != null) {
+            builder.field("script_file", scriptFile);
         }
 
         if (scriptLang != null) {

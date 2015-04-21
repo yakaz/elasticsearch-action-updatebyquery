@@ -91,6 +91,7 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
         } else if (request.hasParam("q")) {
             UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
             sourceBuilder.script(request.param("script"));
+            sourceBuilder.scriptFile(request.param("script_file"));
             sourceBuilder.scriptLang(request.param("lang"));
             for (Map.Entry<String, String> entry : request.params().entrySet()) {
                 if (entry.getKey().startsWith("sp_")) {
