@@ -61,8 +61,7 @@ public class UpdateByQuerySourceBuilder implements ToXContent {
      * @see #script(String, ScriptType)
      */
     public UpdateByQuerySourceBuilder script(String script) {
-        this.script = script;
-        return this;
+        return script(script, ScriptType.INLINE);
     }
 
     /**

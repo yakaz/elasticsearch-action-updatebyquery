@@ -98,8 +98,7 @@ public class UpdateByQueryRequestBuilder extends IndicesReplicationOperationRequ
      * @see #setScript(String, ScriptType)
      */
     public UpdateByQueryRequestBuilder setScript(String script) {
-        sourceBuilder().script(script);
-        return this;
+        return setScript(script, ScriptType.INLINE);
     }
 
     /**

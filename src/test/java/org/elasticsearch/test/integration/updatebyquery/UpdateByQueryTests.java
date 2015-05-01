@@ -26,6 +26,7 @@ import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.updatebyquery.BulkResponseOption;
 import org.elasticsearch.action.updatebyquery.IndexUpdateByQueryResponse;
+import org.elasticsearch.action.updatebyquery.UpdateByQueryRequestBuilder;
 import org.elasticsearch.action.updatebyquery.UpdateByQueryResponse;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -35,6 +36,8 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.plugins.PluginsService;
+import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.script.ScriptService.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
@@ -86,6 +89,7 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
         return ImmutableSettings.settingsBuilder()
+                .put("path.conf", this.getResource("config").getPath())
                 .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
                 .put("action.updatebyquery.bulk_size", 5)
                 .put("script.disable_dynamic", false)
@@ -93,8 +97,10 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .build();
     }
 
-    @Test
-    public void testUpdateByQuery() throws Exception {
+    protected interface ScriptSetter {
+        UpdateByQueryRequestBuilder setScript(UpdateByQueryRequestBuilder ubqRequestBuilder);
+    }
+    public void doTestUpdateByQuery_scriptTypes_base(ScriptSetter scriptSetter) throws Exception {
         createIndex("test");
         ClusterHealthResponse clusterHealth = client().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
         assertThat(clusterHealth.isTimedOut(), equalTo(false));
@@ -115,15 +121,13 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .setQuery(termQuery("field1", 2)).get();
         assertThat(countResponse.getCount(), equalTo(0L));
 
-        Map<String, Object> scriptParams = new HashMap<String, Object>();
-        UpdateByQueryResponse response = updateByQueryClient().prepareUpdateByQuery()
+        UpdateByQueryRequestBuilder ubqRequestBuilder = updateByQueryClient().prepareUpdateByQuery()
                 .setIndices("test")
                 .setTypes("type1")
                 .setIncludeBulkResponses(BulkResponseOption.ALL)
-                .setScript("ctx._source.field1 += 1").setScriptParams(scriptParams)
-                .setQuery(matchAllQuery())
-                .execute()
-                .actionGet();
+                .setQuery(matchAllQuery());
+        ubqRequestBuilder = scriptSetter.setScript(ubqRequestBuilder);
+        UpdateByQueryResponse response = ubqRequestBuilder.execute().actionGet();
 
         assertThat(response, notNullValue());
         assertThat(response.mainFailures().length, equalTo(0));
@@ -149,13 +153,12 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(numDocs));
 
-        response = updateByQueryClient().prepareUpdateByQuery()
+        ubqRequestBuilder = updateByQueryClient().prepareUpdateByQuery()
                 .setIndices("test")
                 .setTypes("type1")
-                .setScript("ctx._source.field1 += 1").setScriptParams(scriptParams)
-                .setQuery(matchAllQuery())
-                .execute()
-                .actionGet();
+                .setQuery(matchAllQuery());
+        ubqRequestBuilder = scriptSetter.setScript(ubqRequestBuilder);
+        response = ubqRequestBuilder.execute().actionGet();
 
         assertThat(response, notNullValue());
         assertThat(response.totalHits(), equalTo(numDocs));
@@ -172,6 +175,49 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .execute()
                 .actionGet();
         assertThat(countResponse.getCount(), equalTo(numDocs));
+    }
+
+    @Test
+    public void testUpdateByQuery_scriptType_inlineImplicit() throws Exception {
+        doTestUpdateByQuery_scriptTypes_base(new ScriptSetter() {
+            @Override
+            public UpdateByQueryRequestBuilder setScript(UpdateByQueryRequestBuilder ubqRequestBuilder) {
+                return ubqRequestBuilder.setScript("ctx._source.field1 += 1");
+            }
+        });
+    }
+
+    @Test
+    public void testUpdateByQuery_scriptType_inlineExplicit() throws Exception {
+        doTestUpdateByQuery_scriptTypes_base(new ScriptSetter() {
+            @Override
+            public UpdateByQueryRequestBuilder setScript(UpdateByQueryRequestBuilder ubqRequestBuilder) {
+                return ubqRequestBuilder.setScript("ctx._source.field1 += 1", ScriptType.INLINE);
+            }
+        });
+    }
+
+    @Test
+    public void testUpdateByQuery_scriptType_file() throws Exception {
+        doTestUpdateByQuery_scriptTypes_base(new ScriptSetter() {
+            @Override
+            public UpdateByQueryRequestBuilder setScript(UpdateByQueryRequestBuilder ubqRequestBuilder) {
+                return ubqRequestBuilder.setScript("field1_incrementer", ScriptType.FILE);
+            }
+        });
+    }
+
+    @Test
+    public void testUpdateByQuery_scriptType_indexed() throws Exception {
+        indexRandom(true, client().prepareIndex(ScriptService.SCRIPT_INDEX, "groovy", "indexed_field1_incrementer")
+                .setSource("{\"script\":\"ctx._source.field1 += 1\"}"));
+        doTestUpdateByQuery_scriptTypes_base(new ScriptSetter() {
+            @Override
+            public UpdateByQueryRequestBuilder setScript(UpdateByQueryRequestBuilder ubqRequestBuilder) {
+                return ubqRequestBuilder.setScript("indexed_field1_incrementer", ScriptType.INDEXED)
+                        .setScriptLang("groovy");
+            }
+        });
     }
 
     @Test

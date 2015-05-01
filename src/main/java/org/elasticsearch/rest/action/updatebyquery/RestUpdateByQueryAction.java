@@ -37,6 +37,8 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.support.RestActions;
 import org.elasticsearch.rest.action.support.RestBuilderListener;
+import org.elasticsearch.script.ScriptParameterParser;
+import org.elasticsearch.script.ScriptParameterParser.ScriptParameterValue;
 
 import java.util.Map;
 
@@ -90,9 +92,16 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
             udqRequest.source(new BytesArray(request.param("source")), false);
         } else if (request.hasParam("q")) {
             UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
-            sourceBuilder.script(request.param("script"));
-            sourceBuilder.scriptFile(request.param("script_file"));
-            sourceBuilder.scriptLang(request.param("lang"));
+            ScriptParameterParser scriptParameterParser = new ScriptParameterParser();
+            scriptParameterParser.parseParams(request);
+            ScriptParameterValue scriptValue = scriptParameterParser.getDefaultScriptParameterValue();
+            if (scriptValue != null) {
+                sourceBuilder.script(scriptValue.script(), scriptValue.scriptType());
+            }
+            String scriptLang = scriptParameterParser.lang();
+            if (scriptLang != null) {
+                sourceBuilder.scriptLang(scriptLang);
+            }
             for (Map.Entry<String, String> entry : request.params().entrySet()) {
                 if (entry.getKey().startsWith("sp_")) {
                     sourceBuilder.addScriptParam(entry.getKey().substring(3), entry.getValue());
