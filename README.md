@@ -138,7 +138,9 @@ Options
 ### Request body options:
 
 * `query`: The query that the documents must match to be updated.
-* `script`: The script name or source.
+* `script`: The inline script source.
+* `script_file`: The file script name.
+* `script_id`: The indexed script id.
 * `lang`: The script language.
 * `params`: The script parameters.
 
