@@ -26,6 +26,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.ScriptService.ScriptType;
 
 import java.util.Map;
@@ -95,7 +96,7 @@ public class UpdateByQueryRequestBuilder extends IndicesReplicationOperationRequ
 
     /**
      * The inline script to execute.
-     * @see #setScript(String, ScriptType)
+     * @see #setScript(String, ScriptService.ScriptType)
      */
     public UpdateByQueryRequestBuilder setScript(String script) {
         return setScript(script, ScriptType.INLINE);
