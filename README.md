@@ -176,6 +176,19 @@ Just like in the Update API, the script has access to the following variables (a
 * `ctx`
   * `_source`
 
+And as of Elasticsearch 1.5.0:
+
+* `ctx`
+  * `_source`
+  * `_index`
+  * `_type`
+  * `_id`
+  * `_version`
+  * `_routing`
+  * `_parent`
+  * `_timestamp`
+  * `_ttl`
+
 ### Output variables
 
 Just like in the Update API, you may update the following variables (as of Elasticsearch 1.1.0):
