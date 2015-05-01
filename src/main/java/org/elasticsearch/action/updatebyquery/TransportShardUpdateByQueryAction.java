@@ -29,7 +29,6 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.support.TransportAction;
-import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
@@ -49,7 +48,10 @@ import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.script.ScriptParameterParser;
+import org.elasticsearch.script.ScriptParameterParser.ScriptParameterValue;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.script.ScriptService.ScriptType;
 import org.elasticsearch.search.internal.DefaultSearchContext;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.internal.ShardSearchLocalRequest;
@@ -168,9 +170,10 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     }
 
     private UpdateByQueryContext parseRequestSource(IndexService indexService, ShardUpdateByQueryRequest request, SearchContext context) {
+        ScriptParameterParser scriptParameterParser = new ScriptParameterParser();
         ParsedQuery parsedQuery = null;
         String script = null;
-        String scriptFile = null;
+        ScriptType scriptType = null;
         String scriptLang = null;
         Map<String, Object> params = Maps.newHashMap();
         try {
@@ -185,18 +188,12 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                         byte[] querySource = parser.binaryValue();
                         XContentParser qSourceParser = XContentFactory.xContent(querySource).createParser(querySource);
                         parsedQuery = indexService.queryParserService().parse(qSourceParser);
-                    } else if ("script".equals(fieldName)) {
-                        parser.nextToken();
-                        script = parser.text();
-                    } else if ("script_file".equals(fieldName)) {
-                        parser.nextToken();
-                        scriptFile = parser.text();
-                    } else if ("lang".equals(fieldName)) {
-                        parser.nextToken();
-                        scriptLang = parser.text();
                     } else if ("params".equals(fieldName)) {
                         parser.nextToken();
                         params = parser.map();
+                    } else {
+                        token = parser.nextToken();
+                        scriptParameterParser.token(fieldName, token, parser);
                     }
                 }
             }
@@ -207,11 +204,17 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         if (parsedQuery == null) {
             throw new ElasticsearchException("Query is required");
         }
-        if (script == null && scriptFile == null) {
-            throw new ElasticsearchException("Script or script_file is required");
+
+        ScriptParameterValue scriptValue = scriptParameterParser.getDefaultScriptParameterValue();
+        if (scriptValue != null) {
+            script = scriptValue.script();
+            scriptType = scriptValue.scriptType();
+        } else {
+            throw new ElasticsearchException("A script is required");
         }
+        scriptLang = scriptParameterParser.lang();
         context.parsedQuery(parsedQuery);
-        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, scriptFile, scriptLang, params);
+        return new UpdateByQueryContext(context, batchSize, clusterService.state(), script, scriptType, scriptLang, params);
     }
 
 
@@ -333,13 +336,8 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                 indexReader.document(docID, fieldVisitor);
                 Uid uid = fieldVisitor.uid();
                 UpdateRequest updateRequest = new UpdateRequest(request.index(), uid.type(), uid.id())
-                        .scriptLang(updateByQueryContext.scriptLang)
-                        .scriptParams(updateByQueryContext.scriptParams);
-                if (updateByQueryContext.scriptFileString != null) {
-                    updateRequest.script(updateByQueryContext.scriptFileString, ScriptService.ScriptType.FILE);
-                } else {
-                    updateRequest.script(updateByQueryContext.scriptString);
-                }
+                        .script(updateByQueryContext.scriptString, updateByQueryContext.scriptLang,
+                                updateByQueryContext.scriptType, updateByQueryContext.scriptParams);
                 bulkItemRequests.add(new BulkItemRequest(counter, updateRequest));
 
                 if (++counter == batchSize) {
@@ -394,17 +392,17 @@ class UpdateByQueryContext {
     final ClusterState clusterState;
 
     final String scriptString;
-    final String scriptFileString;
+    final ScriptType scriptType;
     final String scriptLang;
     final Map<String, Object> scriptParams;
 
     UpdateByQueryContext(SearchContext searchContext, int batchSize, ClusterState clusterState, String scriptString,
-                         String scriptFileString, String scriptLang, Map<String, Object> scriptParams) {
+                         ScriptType scriptType, String scriptLang, Map<String, Object> scriptParams) {
         this.searchContext = searchContext;
         this.clusterState = clusterState;
         this.bulkItemRequestsBulkList = new ArrayList<BulkItemRequest>(batchSize);
         this.scriptString = scriptString;
-        this.scriptFileString = scriptFileString;
+        this.scriptType = scriptType;
         this.scriptLang = scriptLang;
         this.scriptParams = scriptParams;
     }
