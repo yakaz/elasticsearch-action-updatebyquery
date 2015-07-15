@@ -87,9 +87,9 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
         // see if we have it in the body
         if (request.hasContent()) {
-            udqRequest.source(request.content(), request.contentUnsafe());
+            udqRequest.source(request.content());
         } else if (request.hasParam("source")) {
-            udqRequest.source(new BytesArray(request.param("source")), false);
+            udqRequest.source(new BytesArray(request.param("source")));
         } else if (request.hasParam("q")) {
             UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
             ScriptParameterParser scriptParameterParser = new ScriptParameterParser();
