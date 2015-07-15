@@ -26,7 +26,6 @@ import org.elasticsearch.action.updatebyquery.UpdateByQueryAction;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.AbstractPlugin;
 import org.elasticsearch.rest.RestModule;
-import org.elasticsearch.rest.action.RestActionModule;
 import org.elasticsearch.rest.action.updatebyquery.RestUpdateByQueryAction;
 
 /**
