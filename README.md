@@ -39,6 +39,8 @@ Version matrix:
     ┌───────────────────────────────┬────────────────────────┐
     │ Update By Query Action Plugin │ ElasticSearch          │
     ├───────────────────────────────┼────────────────────────┤
+    │ 2.6.0                         │ 1.6.0                  │
+    ├───────────────────────────────┼────────────────────────┤
     │ 2.5.x                         │ 1.5.0 ─► (1.5.2)       │
     ├───────────────────────────────┼────────────────────────┤
     │ 2.4.0                         │ 1.4.0 ─► (1.4.5)       │
@@ -146,7 +148,6 @@ Options
 
 ### Query string options:
 
-* `replication`: The replication type for the delete/index operation (sync or async).
 * `consistency`: The write consistency of the index/delete operation.
 * `response`: What bulk response items to include into the update by query response.
   This can be set to the following: `none`, `failed` and `all`.
