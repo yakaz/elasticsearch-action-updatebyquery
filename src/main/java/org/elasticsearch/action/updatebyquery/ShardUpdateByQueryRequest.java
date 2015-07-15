@@ -50,7 +50,6 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest<
 
     ShardUpdateByQueryRequest(IndexUpdateByQueryRequest request, int shardId, String targetNodeId) {
         index(request.index());
-        replicationType(request.replicationType());
         consistencyLevel(request.consistencyLevel());
         timeout = request.timeout();
         listenerThreaded(request.listenerThreaded());

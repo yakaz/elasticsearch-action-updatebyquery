@@ -21,7 +21,6 @@ package org.elasticsearch.rest.action.updatebyquery;
 
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.action.updatebyquery.*;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
@@ -67,10 +66,6 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                 Strings.splitStringByCommaToArray(request.param("type"))
         );
         udqRequest.listenerThreaded(false);
-        String replicationType = request.param("replication");
-        if (replicationType != null) {
-            udqRequest.replicationType(ReplicationType.fromString(replicationType));
-        }
         String consistencyLevel = request.param("consistency");
         if (consistencyLevel != null) {
             udqRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
