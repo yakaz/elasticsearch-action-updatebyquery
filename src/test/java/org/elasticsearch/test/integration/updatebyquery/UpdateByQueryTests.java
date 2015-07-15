@@ -88,7 +88,6 @@ public class UpdateByQueryTests extends ElasticsearchIntegrationTest {
                 .put("path.conf", this.getResource("config").getPath())
                 .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
                 .put("action.updatebyquery.bulk_size", 5)
-                .put("script.disable_dynamic", false)
                 .put(super.nodeSettings(nodeOrdinal))
                 .build();
     }
