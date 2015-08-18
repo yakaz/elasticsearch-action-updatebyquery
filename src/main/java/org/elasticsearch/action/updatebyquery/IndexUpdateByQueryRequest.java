@@ -39,7 +39,6 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
     private Set<String> routing = Sets.newHashSet();
 
     private BytesReference source;
-    private boolean sourceUnsafe;
     private long nowInMillis;
 
     IndexUpdateByQueryRequest(UpdateByQueryRequest request, String index, String[] filteringAliases, Set<String> routing) {
@@ -48,7 +47,6 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
         this.types = request.types();
         this.bulkResponseOption = request.bulkResponseOptions();
         this.source = request.source();
-        this.sourceUnsafe = request.sourceUnsafe();
         this.nowInMillis = request.nowInMillis;
         if (filteringAliases != null) {
             this.filteringAliases = filteringAliases;
@@ -78,18 +76,8 @@ public class IndexUpdateByQueryRequest extends IndexReplicationOperationRequest<
         return source;
     }
 
-    public boolean sourceUnsafe() {
-        return sourceUnsafe;
-    }
-
     public long nowInMillis() {
         return nowInMillis;
-    }
-
-    public void beforeLocalFork() {
-        if (sourceUnsafe) {
-            source = source.copyBytesArray();
-        }
     }
 
     @Override

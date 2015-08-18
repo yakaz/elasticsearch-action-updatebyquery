@@ -21,7 +21,6 @@ package org.elasticsearch.rest.action.updatebyquery;
 
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.action.updatebyquery.*;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClient;
@@ -67,10 +66,6 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
                 Strings.splitStringByCommaToArray(request.param("type"))
         );
         udqRequest.listenerThreaded(false);
-        String replicationType = request.param("replication");
-        if (replicationType != null) {
-            udqRequest.replicationType(ReplicationType.fromString(replicationType));
-        }
         String consistencyLevel = request.param("consistency");
         if (consistencyLevel != null) {
             udqRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
@@ -87,9 +82,9 @@ public class RestUpdateByQueryAction extends BaseRestHandler {
 
         // see if we have it in the body
         if (request.hasContent()) {
-            udqRequest.source(request.content(), request.contentUnsafe());
+            udqRequest.source(request.content());
         } else if (request.hasParam("source")) {
-            udqRequest.source(new BytesArray(request.param("source")), false);
+            udqRequest.source(new BytesArray(request.param("source")));
         } else if (request.hasParam("q")) {
             UpdateByQuerySourceBuilder sourceBuilder = new UpdateByQuerySourceBuilder();
             ScriptParameterParser scriptParameterParser = new ScriptParameterParser();

@@ -33,14 +33,13 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
 /**
  * Represents a shard update by query request, that will be performed on the targeted shard.
  */
-public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest {
+public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest<ShardUpdateByQueryRequest> {
 
     private String[] types;
     private BulkResponseOption bulkResponseOption;
     private String[] filteringAliases = Strings.EMPTY_ARRAY;
 
     private BytesReference source;
-    private boolean sourceUnsafe;
 
     private long nowInMillis;
     private int shardId = -1;
@@ -51,13 +50,11 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
 
     ShardUpdateByQueryRequest(IndexUpdateByQueryRequest request, int shardId, String targetNodeId) {
         index(request.index());
-        replicationType(request.replicationType());
         consistencyLevel(request.consistencyLevel());
         timeout = request.timeout();
         listenerThreaded(request.listenerThreaded());
         types = request.types();
         source = request.source();
-        sourceUnsafe = request.sourceUnsafe();
         bulkResponseOption = request.bulkResponseOptions();
         filteringAliases = request.filteringAliases();
         this.nowInMillis = request.nowInMillis();
@@ -71,10 +68,6 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
 
     public BytesReference source() {
         return source;
-    }
-
-    public boolean sourceUnsafe() {
-        return sourceUnsafe;
     }
 
     public String[] filteringAliases() {
@@ -98,13 +91,6 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
     }
 
     @Override
-    public void beforeLocalFork() {
-        if (sourceUnsafe) {
-            source = source.copyBytesArray();
-        }
-    }
-
-    @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = super.validate();
         if (source == null) {
@@ -122,7 +108,6 @@ public class ShardUpdateByQueryRequest extends ShardReplicationOperationRequest 
         shardId = in.readVInt();
         targetNodeId = in.readString();
         source = in.readBytesReference();
-        sourceUnsafe = false;
     }
 
     @Override

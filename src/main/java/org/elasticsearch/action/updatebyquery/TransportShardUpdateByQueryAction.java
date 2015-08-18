@@ -114,7 +114,6 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         }
 
         if (request.operationThreaded()) {
-            request.beforeLocalFork();
             threadPool.executor(ThreadPool.Names.BULK).execute(new Runnable() {
 
                 public void run() {

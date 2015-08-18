@@ -43,7 +43,6 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest<Upd
     private BulkResponseOption bulkResponseOption = BulkResponseOption.NONE;
     private String routing;
     private BytesReference source;
-    private boolean sourceUnsafe;
 
     long nowInMillis;
 
@@ -65,24 +64,18 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest<Upd
         return this;
     }
 
-    public UpdateByQueryRequest source(BytesReference source, boolean sourceUnsafe) {
+    public UpdateByQueryRequest source(BytesReference source) {
         this.source = source;
-        this.sourceUnsafe = sourceUnsafe;
         return this;
     }
 
     public UpdateByQueryRequest source(UpdateByQuerySourceBuilder sourceBuilder) {
         this.source = sourceBuilder.buildAsBytes(contentType);
-        this.sourceUnsafe = false;
         return this;
     }
 
     public BytesReference source() {
         return source;
-    }
-
-    public boolean sourceUnsafe() {
-        return sourceUnsafe;
     }
 
     public BulkResponseOption bulkResponseOptions() {
@@ -103,12 +96,6 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest<Upd
         return this;
     }
 
-    public void beforeLocalFork() {
-        if (sourceUnsafe) {
-            source = source.copyBytesArray();
-        }
-    }
-
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = super.validate();
@@ -125,7 +112,6 @@ public class UpdateByQueryRequest extends IndicesReplicationOperationRequest<Upd
         bulkResponseOption = BulkResponseOption.fromId(in.readByte());
         routing = in.readOptionalString();
         source = in.readBytesReference();
-        sourceUnsafe = false;
     }
 
     @Override

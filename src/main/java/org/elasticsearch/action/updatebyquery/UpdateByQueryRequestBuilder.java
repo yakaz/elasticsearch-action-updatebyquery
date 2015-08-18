@@ -21,7 +21,6 @@ package org.elasticsearch.action.updatebyquery;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.support.replication.IndicesReplicationOperationRequestBuilder;
-import org.elasticsearch.action.support.replication.ReplicationType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.UpdateByQueryClientWrapper;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -51,11 +50,6 @@ public class UpdateByQueryRequestBuilder extends IndicesReplicationOperationRequ
 
     public UpdateByQueryRequestBuilder setIncludeBulkResponses(BulkResponseOption option) {
         request().bulkResponseOptions(option);
-        return this;
-    }
-
-    public UpdateByQueryRequestBuilder setReplicationType(ReplicationType replicationType) {
-        request().replicationType(replicationType);
         return this;
     }
 

@@ -1,7 +1,5 @@
 package org.elasticsearch.action.bulk;
 
-import org.elasticsearch.index.shard.ShardId;
-
 public class PublicBulkShardRequest extends BulkShardRequest {
 
     public PublicBulkShardRequest() {
