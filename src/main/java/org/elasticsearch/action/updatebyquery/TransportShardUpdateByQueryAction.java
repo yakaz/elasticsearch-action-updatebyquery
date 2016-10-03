@@ -80,6 +80,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
     private final ClusterService clusterService;
     private final ScriptService scriptService;
     private final int batchSize;
+    private final Integer maxItemsPerShard;
     private final CacheRecycler cacheRecycler;
     private final PageCacheRecycler pageCacheRecycler;
     private final BigArrays bigArrays;
@@ -104,6 +105,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
         this.pageCacheRecycler = pageCacheRecycler;
         this.bigArrays = bigArrays;
         this.batchSize = componentSettings.getAsInt("bulk_size", 1000);
+        this.maxItemsPerShard = componentSettings.getAsInt("max_items_per_shard", null);
         transportService.registerHandler(ACTION_NAME, new TransportHandler());
     }
 
@@ -263,7 +265,7 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
                             break;
                     }
                 }
-                if (iterator.docID() == DocIdSetIterator.NO_MORE_DOCS) {
+                if (iterator.docID() == DocIdSetIterator.NO_MORE_DOCS || areMaxItemsPerShardExceeded()) {
                     finalizeBulkActions(null);
                 } else {
                     threadPool.executor(ThreadPool.Names.BULK).execute(new Runnable() {
@@ -288,6 +290,10 @@ public class TransportShardUpdateByQueryAction extends TransportAction<ShardUpda
             } catch (Throwable t) {
                 finalResponseListener.onFailure(t);
             }
+        }
+
+        private boolean areMaxItemsPerShardExceeded() {
+            return maxItemsPerShard != null && maxItemsPerShard <= updated;
         }
 
         public void executeBulkIndex() throws IOException {

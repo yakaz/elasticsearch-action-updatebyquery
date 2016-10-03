@@ -161,6 +161,7 @@ Options
 ### Configuration options:
 
 * `action.updatebyquery.bulk_size`: The number of documents per update bulk. Defaults to `1000`.
+* `action.updatebyquery.max_items_per_shard`: Maximum number of documents that should be updated on a shard. It is rounded up to a next multiple of `bulk_size`. Not set by default which means no limits.
 * `threadpool.bulk.queue_size`: This plugins files bulk requests to perform the actual updates.
    You may decide to increase this value over its default of 50 if you are experiencing the following errors:
    `EsRejectedExecutionException[rejected execution (queue capacity 50) on org.elasticsearch.action.updatebyquery.TransportShardUpdateByQueryAction$1]`
